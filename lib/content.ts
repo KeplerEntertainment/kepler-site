@@ -1,0 +1,417 @@
+/**
+ * Everything the page says about Kepler, as data. Sources: the project's design
+ * documents (DESIGN, REWORK, CLASSES, CALAMITY) and the lore bible (LORE and
+ * docs/lore/**). Mechanics documents win on rules and numbers; lore supplies names.
+ */
+
+export type Element = "Water" | "Fire" | "Air" | "Earth";
+export type Zone = "blue" | "yellow" | "red" | "black";
+
+// ── The world ────────────────────────────────────────────────────────────────
+
+export const premise = [
+  "The world is Ormere, a vessel for four living Currents: Water, Fire, Air and Earth. Long ago the Ashlar dug too deep and cracked it. Through that crack, the Maw, an emptiness called the Hollow breathes in, again and again.",
+  "Each breath is a Calamity Wave. Breach Scars tear open across the map and the Hollowborn pour through. Where a Scar is not sealed, the land's Currents drain and invert into Blight, and Blight spreads.",
+  "The waves used to come once a generation. Now they come every week. Players are the Tollbound: volunteers who swore on a Tollstone to answer the call, and who come back from death to answer it again.",
+];
+
+export interface ZoneInfo {
+  key: Zone;
+  name: string;
+  tiers: string;
+  pvp: string;
+  death: string;
+  reward: string;
+}
+
+/** DESIGN §8.1 and §8.2. Rewards multiply as risk rises. */
+export const zones: ZoneInfo[] = [
+  { key: "blue", name: "Blue", tiers: "T1–T4", pvp: "Off, duels only", death: "Durability loss, nothing dropped", reward: "x1.0" },
+  { key: "yellow", name: "Yellow", tiers: "T4–T5", pvp: "Only when flagged; knockdown, no kill", death: "Durability loss, nothing dropped", reward: "x1.2 resources / x1.5 fame" },
+  { key: "red", name: "Red", tiers: "T5–T7", pvp: "Always on; knockdown, then execute", death: "Full loot in a loot bag", reward: "x1.5 resources / x2.25 fame" },
+  { key: "black", name: "Black", tiers: "T6–T8", pvp: "Always on; everyone outside your guild or alliance is an enemy", death: "Full loot, instant death", reward: "x2.0 resources / x3.0 fame" },
+];
+
+export interface City {
+  id: string;
+  name: string;
+  epithet: string;
+  tile: string;
+  /** 0-based grid position on the default 20×20 map: A1 is (0, 0). */
+  x: number;
+  y: number;
+  ground: string;
+  trade: string;
+  proverb: string;
+}
+
+/** DESIGN §14 for function, LORE §6 and docs/lore/cities for names and voice. */
+export const cities: City[] = [
+  {
+    id: "forgecross",
+    name: "Forgecross",
+    epithet: "the Anvil of the Charter",
+    tile: "I9",
+    x: 8,
+    y: 8,
+    ground: "North-west, mountains",
+    trade: "Ore into metal bars. Plate armour, swords, maces, hammers, pickaxes.",
+    proverb: "Steel does not fail. People do.",
+  },
+  {
+    id: "timberwatch",
+    name: "Timberwatch",
+    epithet: "the Green Wall",
+    tile: "M9",
+    x: 12,
+    y: 8,
+    ground: "North-east, forest",
+    trade: "Wood into planks. Bows, crossbows, spears, staves, furniture.",
+    proverb: "Grow nothing you cannot tend.",
+  },
+  {
+    id: "quarrystone",
+    name: "Quarrystone",
+    epithet: "the Crossroads Crown",
+    tile: "K11",
+    x: 10,
+    y: 10,
+    ground: "Centre, the hub of every road",
+    trade: "Stone into blocks. Tools, food, potions, facility kits, mounts. Home of the black market.",
+    proverb: "Write it down, so we fail differently next time.",
+  },
+  {
+    id: "weavemere",
+    name: "Weavemere",
+    epithet: "the Loom of Lakes",
+    tile: "I13",
+    x: 8,
+    y: 12,
+    ground: "South-west, wetlands",
+    trade: "Fibre into cloth. Cloth armour, every staff, capes, tomes.",
+    proverb: "Ask quietly. The water carries.",
+  },
+  {
+    id: "hidegate",
+    name: "Hidegate",
+    epithet: "the Banner Gate",
+    tile: "M13",
+    x: 12,
+    y: 12,
+    ground: "South-east, plains",
+    trade: "Hide into leather. Leather armour, daggers, axes, bags, saddles.",
+    proverb: "A road shared is half as long.",
+  },
+];
+
+/** Default road network: four spokes from Quarrystone plus a ring through the corner cities. */
+export const roads: [string, string][] = [
+  ["quarrystone", "forgecross"],
+  ["quarrystone", "timberwatch"],
+  ["quarrystone", "weavemere"],
+  ["quarrystone", "hidegate"],
+  ["forgecross", "timberwatch"],
+  ["timberwatch", "hidegate"],
+  ["hidegate", "weavemere"],
+  ["weavemere", "forgecross"],
+];
+
+// ── Systems ──────────────────────────────────────────────────────────────────
+
+export const coreLoop = [
+  { step: "Gather", text: "Ore, wood, fibre, hide, stone and fish, with tiered tools. Richer nodes sit in riskier tiles." },
+  { step: "Refine", text: "Bars, planks, cloth, leather and blocks at city stations. Each city refines one thing best." },
+  { step: "Craft", text: "Gear, tools, food and potions, with a quality roll from Normal to Masterpiece." },
+  { step: "Trade", text: "Order-book markets in every city. Prices differ, so hauling goods pays." },
+  { step: "Risk", text: "Wear it into yellow, red and black tiles, dungeons and sieges. Win and loot. Lose and replace." },
+];
+
+export interface System {
+  title: string;
+  tag: string;
+  body: string;
+  points: string[];
+}
+
+export const systems: System[] = [
+  {
+    title: "Economy & markets",
+    tag: "player-made",
+    body: "Almost every usable item is gathered, refined and crafted by players and sold to players. No premium currency, nothing to buy with real money.",
+    points: [
+      "Gear in tiers T1–T8, enchanted .0–.4, with five quality grades",
+      "Buy and sell orders that fill while you are offline",
+      "Banks per city, a black market in Quarrystone, roadside stalls",
+      "Full loot, durability and the black market keep removing items, so crafters always have demand",
+    ],
+  },
+  {
+    title: "Zones & full loot",
+    tag: "risk = reward",
+    body: "One open world on a 20×20 grid of 512-block tiles. Blue near the centre, black at the edges. Tile names, tiers and danger show on entry.",
+    points: [
+      "Flagging in yellow, knockdown and execute in red, free-for-all in black",
+      "Loot bags drop everything you wore; some of it is destroyed",
+      "Reputation and outlaw status for players who prey on the weak",
+      "Protected roads with waystones link the five cities",
+    ],
+  },
+  {
+    title: "Kingdoms, guilds & sieges",
+    tag: "player power",
+    body: "Players found towns, claim land, grow them into kingdoms and build their own stations and markets. Guilds fight over everything, including the server cities.",
+    points: [
+      "Towny-style claims, plots, ranks and town levels",
+      "Guilds, alliances, parties, a guild bank and guild buffs",
+      "War declarations, raids and scheduled sieges with siege equipment",
+      "Guilds that capture a server city collect its taxes",
+    ],
+  },
+  {
+    title: "Dungeons & POIs",
+    tag: "PvE",
+    body: "Owner-built dungeons, from solo runs to ten-player expeditions, plus small points of interest scattered across every tile.",
+    points: [
+      "Solo, group and large dungeons, instanced or in the open world",
+      "Hellgates and invasion dungeons for PvP in red and black",
+      "Random mist portals with a rare jackpot",
+      "Quest rooms and quest bosses that appear only for players on that step",
+    ],
+  },
+  {
+    title: "Calamity waves",
+    tag: "the weekly event",
+    body: "Tollstones in every city count down to the next wave and forecast where it will hit. Then Scars open, and the server has to close them.",
+    points: [
+      "Tremors three times a week, a Wave every Saturday, a Great Calamity every fourth",
+      "Scars run Rupture, Tide, Herald, Seal. If Pressure hits 100 %, the tile is lost to Blight",
+      "Blight spreads hour by hour; cleansing takes Censers, Stakes and people",
+      "Riftglass, the wave currency, buys recipes and unlocks, never finished gear",
+    ],
+  },
+  {
+    title: "Quests & conversations",
+    tag: "~2,000 lines planned",
+    body: "Quest lines start in the five cities, about 400 per city, each one to twenty tasks long. Givers talk through branching conversations written to carry voice lines.",
+    points: [
+      "Fourteen quest-giver roles per city, from steward to explorer",
+      "Gathering, crafting, combat, dungeon, trade, racial and realm lines",
+      "City Favor ladders with recipes, titles and cosmetics",
+      "Daily and weekly contracts, bounties and a season ladder",
+    ],
+  },
+  {
+    title: "BlueMap integration",
+    tag: "live web map",
+    body: "The world's structure is drawn on BlueMap, so the web map is a planning tool, not just a picture.",
+    points: [
+      "Zone tiles in their colours, with tile and area names",
+      "Server cities, roads, towns and kingdom borders",
+      "Dungeon entrances, POIs and siege status",
+      "Calamity layers: forecasts, Scars and Blight levels",
+    ],
+  },
+  {
+    title: "Custom items & mobs",
+    tag: "content engine",
+    body: "Items, recipes, mobs, dungeons and quests are YAML, so content can be written without code. A generated resource pack carries the models, sounds and voice files.",
+    points: [
+      "In-house custom item system with resource pack build and hosting",
+      "A roster of 48 custom mobs in families, plus champions",
+      "Ten bosses with phases, and world events",
+      "Ten Hollowborn and four Heralds for the calamity",
+    ],
+  },
+];
+
+export const aspects = [
+  { name: "Ashen", current: "Fire", herald: "Cinderjaw", prep: "Fire-resist draughts, healers, plate" },
+  { name: "Drowned", current: "Water", herald: "the Tidewidow", prep: "Cleanse potions, mobility, CC-reduction food" },
+  { name: "Hollow", current: "Air", herald: "the Hushking", prep: "Energy potions, cloth and magic resist" },
+  { name: "Thorned", current: "Earth", herald: "the Bramblemother", prep: "Area weapons, armour food, bleed cures" },
+] as const;
+
+export const blightLevels = ["Clean", "Tainted", "Blighted", "Festering", "Withered", "Hollowed"];
+
+// ── Races and classes ────────────────────────────────────────────────────────
+
+export interface Race {
+  name: string;
+  home: string;
+  primary: Element;
+  secondary: Element;
+  nudge: string;
+  q: string;
+  e: string;
+}
+
+/** REWORK §1.2 and §2.2 (approved 2026-10-01). */
+export const races: Race[] = [
+  { name: "Galeward", home: "Plains", primary: "Air", secondary: "Fire", nudge: "Rider, trader, hit-and-run skirmisher", q: "Gust Lance", e: "Grassfire Run" },
+  { name: "Rootkin", home: "Forest", primary: "Earth", secondary: "Water", nudge: "Gatherer, sustain fighter, off-healer", q: "Bramble Snare", e: "Sapwell" },
+  { name: "Dunestrider", home: "Desert", primary: "Fire", secondary: "Air", nudge: "Mobile skirmisher, opener", q: "Scorch Dart", e: "Dust Step" },
+  { name: "Frostvein", home: "Snow", primary: "Water", secondary: "Air", nudge: "Control caster, energy-rich mage", q: "Rime Spike", e: "Whiteout" },
+  { name: "Cragborn", home: "Mountains", primary: "Earth", secondary: "Fire", nudge: "Tank, front line, miner", q: "Stonefist", e: "Forge Heart" },
+  { name: "Mirefolk", home: "Swamp", primary: "Water", secondary: "Earth", nudge: "Damage over time, alchemist, area denial", q: "Bog Spit", e: "Sinkhole" },
+  { name: "Vinereach", home: "Jungle", primary: "Air", secondary: "Water", nudge: "Ambusher, assassin, hunter", q: "Canopy Leap", e: "Mist Veil" },
+  { name: "Tidesworn", home: "Ocean", primary: "Water", secondary: "Air", nudge: "Healer, support, sea trader", q: "Tide Lash", e: "Squall Call" },
+  { name: "Ochrehide", home: "Badlands", primary: "Earth", secondary: "Fire", nudge: "Crafter, durable bruiser", q: "Mesa Slam", e: "Kiln Skin" },
+  { name: "Cinderborn", home: "Volcanic / Nether", primary: "Fire", secondary: "Earth", nudge: "Aggressive caster, burst damage", q: "Cinder Burst", e: "Obsidian Shell" },
+];
+
+export interface GameClass {
+  name: string;
+  order: string;
+  role: string;
+  r: string;
+  rEl: Element;
+  t: string;
+  tEl: Element;
+}
+
+/** CLASSES §7 and §7.1; order names from LORE §9.3. */
+export const classes: GameClass[] = [
+  { name: "Warden", order: "The Keepstone Order", role: "Tank, anchor", r: "Bulwark Stone", rEl: "Earth", t: "Citadel", tEl: "Earth" },
+  { name: "Berserker", order: "The Red Hearth", role: "Melee bruiser, lifesteal", r: "Blood Boil", rEl: "Fire", t: "Red Mist", tEl: "Fire" },
+  { name: "Duelist", order: "The Crosswind Salle", role: "Single-target skirmisher", r: "Zephyr Feint", rEl: "Air", t: "Thousand Cuts", tEl: "Air" },
+  { name: "Shadowblade", order: "The Quiet Hand", role: "Assassin, stealth burst", r: "Smoke Slip", rEl: "Air", t: "Nightfall", tEl: "Water" },
+  { name: "Ranger", order: "The Long Watch", role: "Sustained ranged damage", r: "Gale Arrow", rEl: "Air", t: "Rain of the Hunt", tEl: "Water" },
+  { name: "Arbalist", order: "The Boltwrights' Company", role: "Ranged burst, siege", r: "Stonepiercer", rEl: "Earth", t: "Bombardment", tEl: "Fire" },
+  { name: "Pyromancer", order: "The School of the Kept Flame", role: "Area magic damage", r: "Flame Lash", rEl: "Fire", t: "Cataclysm", tEl: "Fire" },
+  { name: "Cryomancer", order: "The Stillwater Cloister", role: "Control mage", r: "Frost Bind", rEl: "Water", t: "Deep Winter", tEl: "Water" },
+  { name: "Hexer", order: "The Black Tide Chapter", role: "Damage over time, anti-heal", r: "Black Tide", rEl: "Water", t: "Blight Field", tEl: "Earth" },
+  { name: "Cleric", order: "The Lantern Rite", role: "Burst healer", r: "Clear Spring", rEl: "Water", t: "Ascension", tEl: "Fire" },
+  { name: "Druid", order: "The Rootbound Circle", role: "Healing over time, off-tank", r: "Root Lattice", rEl: "Earth", t: "Grove Awakening", tEl: "Earth" },
+  { name: "Warcaller", order: "The Banner-Singers", role: "Group support", r: "Gale Chorus", rEl: "Air", t: "Anthem of War", tEl: "Air" },
+  { name: "Spellblade", order: "The Sunsteel Lodge", role: "Melee-magic hybrid", r: "Brand Edge", rEl: "Fire", t: "Arcane Ascendance", tEl: "Air" },
+  { name: "Vanguard", order: "The First-Through", role: "Engage tank, diver", r: "Ram Quake", rEl: "Earth", t: "Juggernaut Rush", tEl: "Earth" },
+  { name: "Monk", order: "The Order of the Turning River", role: "Evasive skirmisher", r: "Flowing Palm", rEl: "Water", t: "Enlightenment", tEl: "Air" },
+];
+
+export const skillBar = [
+  { key: "Q", hotbar: 1, source: "Race", text: "Race skill in the race's primary element" },
+  { key: "E", hotbar: 2, source: "Race", text: "Race utility in the secondary element" },
+  { key: "R", hotbar: 3, source: "Class", text: "Class signature skill" },
+  { key: "T", hotbar: 4, source: "Class", text: "Class ultimate, built on charge" },
+  { key: "Z", hotbar: 5, source: "Weapon", text: "Weapon strike, one of three" },
+  { key: "X", hotbar: 6, source: "Weapon", text: "Signature of the exact weapon held" },
+  { key: "C", hotbar: 7, source: "Armour", text: "One armour skill or weapon technique" },
+] as const;
+
+/** REWORK §5.5: gate level, effect multiplier and what the tier adds. */
+export const tiers = [
+  { name: "Common", gate: 1, mult: "x1.00", adds: "The skill as written" },
+  { name: "Rare", gate: 20, mult: "x1.05", adds: "Its elemental status lasts longer" },
+  { name: "Epic", gate: 40, mult: "x1.10", adds: "A new name and one extra mechanic" },
+  { name: "Legendary", gate: 60, mult: "x1.16", adds: "Shorter cooldown, an extra modifier slot" },
+  { name: "Mythic", gate: 80, mult: "x1.22", adds: "A second extra mechanic and unique visuals" },
+];
+
+// ── Architecture ─────────────────────────────────────────────────────────────
+
+export interface Module {
+  id: string;
+  name: string;
+  does: string;
+  status: "drafted" | "in progress" | "next";
+}
+
+export const coreServices = [
+  "Player data & SQLite",
+  "Silver, fame & mastery",
+  "Tiered item API",
+  "Zones API",
+  "GUI framework",
+  "Map marker service",
+  "Activity & quest events",
+  "Calamity service hooks",
+];
+
+export const moduleGroups: { name: string; modules: Module[] }[] = [
+  {
+    name: "Character",
+    modules: [
+      { id: "kepler-combat", name: "KeplerCombat", does: "Health, energy, weapon skills, CC, food and potions, mounts, duels", status: "drafted" },
+      { id: "kepler-progression", name: "KeplerProgression", does: "Destiny board, titles, collection log, leaderboards", status: "drafted" },
+      { id: "kepler-races", name: "KeplerRaces", does: "The ten races, passives, race skills, racial track", status: "in progress" },
+      { id: "kepler-classes", name: "KeplerClasses", does: "The fifteen classes, class skills, talents", status: "in progress" },
+    ],
+  },
+  {
+    name: "Economy",
+    modules: [
+      { id: "kepler-items", name: "KeplerItems", does: "Custom items, resource pack build and hosting, sounds", status: "drafted" },
+      { id: "kepler-gathering", name: "KeplerGathering", does: "Resource nodes, tools, fishing, farming", status: "drafted" },
+      { id: "kepler-crafting", name: "KeplerCrafting", does: "Refining, crafting, stations, focus, quality, repair", status: "drafted" },
+      { id: "kepler-market", name: "KeplerMarket", does: "Order-book markets, banks, black market, travel, stalls", status: "drafted" },
+    ],
+  },
+  {
+    name: "World & power",
+    modules: [
+      { id: "kepler-zones", name: "KeplerZones", does: "Tile grid, zone colours, roads, cities, flagging, death rules", status: "drafted" },
+      { id: "kepler-map", name: "KeplerMap", does: "BlueMap layers for tiles, cities, roads, towns, dungeons", status: "drafted" },
+      { id: "kepler-towns", name: "KeplerTowns", does: "Towns, claims, kingdoms, player-built facilities", status: "drafted" },
+      { id: "kepler-guilds", name: "KeplerGuilds", does: "Guilds, alliances, parties, guild bank, season ranking", status: "drafted" },
+      { id: "kepler-war", name: "KeplerWar", does: "War declarations, sieges, city control, siege equipment", status: "drafted" },
+    ],
+  },
+  {
+    name: "Adventure",
+    modules: [
+      { id: "kepler-mobs", name: "KeplerMobs", does: "Custom mob engine, skills, bosses, world events", status: "next" },
+      { id: "kepler-dungeons", name: "KeplerDungeons", does: "Dungeons, quest rooms, POIs, hellgates", status: "drafted" },
+      { id: "kepler-dialogue", name: "KeplerDialogue", does: "NPCs, branching conversations, voice lines", status: "drafted" },
+      { id: "kepler-quests", name: "KeplerQuests", does: "Quest engine, boards, journal, validator", status: "drafted" },
+      { id: "kepler-contracts", name: "KeplerContracts", does: "Contracts, bounties, achievements, season ladder", status: "drafted" },
+      { id: "kepler-calamity", name: "KeplerCalamity", does: "Waves, Scars, Blight, cleansing, Riftglass", status: "next" },
+    ],
+  },
+];
+
+// ── Roadmap ──────────────────────────────────────────────────────────────────
+
+export type PhaseState = "done" | "now" | "next" | "later";
+
+export const roadmap: { phase: string; state: PhaseState; text: string }[] = [
+  {
+    phase: "Game design",
+    state: "done",
+    text: "Full specifications for every system, the calamity and the classes. The races, skills and characters rework was approved in October 2026.",
+  },
+  {
+    phase: "KeplerCore",
+    state: "done",
+    text: "The shared API every addon builds on, reviewed and patched after its QA pass.",
+  },
+  {
+    phase: "Addon drafts",
+    state: "now",
+    text: "Most addons have a first draft. Races and classes are being rebuilt to the approved rework; mobs and calamity are next.",
+  },
+  {
+    phase: "Review & QA",
+    state: "now",
+    text: "Code reviews per addon, then tester passes that hunt for item dupes, broken menus and edge cases.",
+  },
+  {
+    phase: "Lore",
+    state: "done",
+    text: "The lore bible plus pages for the five cities, ten kindreds, fifteen orders, the factions and the calamity.",
+  },
+  {
+    phase: "Quest content",
+    state: "next",
+    text: "The engine is drafted. Writing the quest lines and conversations, city by city, comes after the lore.",
+  },
+  {
+    phase: "Integration & live test",
+    state: "later",
+    text: "All plugins on one server, the cities built, a closed test with real players and real loot.",
+  },
+  {
+    phase: "Launch",
+    state: "later",
+    text: "No date yet. It opens when the test says it is ready, not before.",
+  },
+];

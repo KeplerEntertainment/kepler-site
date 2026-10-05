@@ -74,7 +74,11 @@ body {
   outline-offset: 2px;
 }
 
-/* ── the neo-brutalist primitives (unchanged from the portfolio) ─────────── */
+/* ── the neo-brutalist primitives (from the portfolio) ───────────────────── */
+
+/* Kept in the components layer so a utility such as bg-accent on a slab wins
+   over the slab's default panel fill. */
+@layer components {
 
 /* A slab: hard outline plus a solid offset shadow. The whole language is this. */
 .slab {
@@ -120,6 +124,8 @@ body {
 }
 .ul-link:hover {
   text-decoration-thickness: 5px;
+}
+
 }
 
 /* Long words in headings (KeplerCore, Dunestrider) must wrap on a phone. */

@@ -24,7 +24,7 @@ export interface ZoneInfo {
   reward: string;
 }
 
-/** DESIGN §8.1 and §8.2. Rewards multiply as risk rises. */
+/** DESIGN §8.2 and WORLD_LAYOUT §3. Rewards multiply as risk rises. */
 export const zones: ZoneInfo[] = [
   { key: "blue", name: "Blue", tiers: "T1–T4", pvp: "Off, duels only", death: "Durability loss, nothing dropped", reward: "x1.0" },
   { key: "yellow", name: "Yellow", tiers: "T4–T5", pvp: "Only when flagged; knockdown, no kill", death: "Durability loss, nothing dropped", reward: "x1.2 resources / x1.5 fame" },
@@ -37,7 +37,7 @@ export interface City {
   name: string;
   epithet: string;
   tile: string;
-  /** 0-based grid position on the default 20×20 map: A1 is (0, 0). */
+  /** 0-based grid position on the default 23×23 map: A1 is (0, 0). */
   x: number;
   y: number;
   ground: string;
@@ -45,15 +45,15 @@ export interface City {
   proverb: string;
 }
 
-/** DESIGN §14 for function, LORE §6 and docs/lore/cities for names and voice. */
+/** DESIGN §14 for function, WORLD_LAYOUT §2 for tiles, LORE §6 and docs/lore/cities for names and voice. */
 export const cities: City[] = [
   {
     id: "forgecross",
     name: "Forgecross",
     epithet: "the Anvil of the Charter",
-    tile: "I9",
-    x: 8,
-    y: 8,
+    tile: "E5",
+    x: 4,
+    y: 4,
     ground: "North-west, mountains",
     trade: "Ore into metal bars. Plate armour, swords, maces, hammers, pickaxes.",
     proverb: "Steel does not fail. People do.",
@@ -62,9 +62,9 @@ export const cities: City[] = [
     id: "timberwatch",
     name: "Timberwatch",
     epithet: "the Green Wall",
-    tile: "M9",
-    x: 12,
-    y: 8,
+    tile: "S5",
+    x: 18,
+    y: 4,
     ground: "North-east, forest",
     trade: "Wood into planks. Bows, crossbows, spears, staves, furniture.",
     proverb: "Grow nothing you cannot tend.",
@@ -73,9 +73,9 @@ export const cities: City[] = [
     id: "quarrystone",
     name: "Quarrystone",
     epithet: "the Crossroads Crown",
-    tile: "K11",
-    x: 10,
-    y: 10,
+    tile: "L12",
+    x: 11,
+    y: 11,
     ground: "Centre, the hub of every road",
     trade: "Stone into blocks. Tools, food, potions, facility kits, mounts. Home of the black market.",
     proverb: "Write it down, so we fail differently next time.",
@@ -84,9 +84,9 @@ export const cities: City[] = [
     id: "weavemere",
     name: "Weavemere",
     epithet: "the Loom of Lakes",
-    tile: "I13",
-    x: 8,
-    y: 12,
+    tile: "E19",
+    x: 4,
+    y: 18,
     ground: "South-west, wetlands",
     trade: "Fibre into cloth. Cloth armour, every staff, capes, tomes.",
     proverb: "Ask quietly. The water carries.",
@@ -95,25 +95,106 @@ export const cities: City[] = [
     id: "hidegate",
     name: "Hidegate",
     epithet: "the Banner Gate",
-    tile: "M13",
-    x: 12,
-    y: 12,
+    tile: "S19",
+    x: 18,
+    y: 18,
     ground: "South-east, plains",
     trade: "Hide into leather. Leather armour, daggers, axes, bags, saddles.",
     proverb: "A road shared is half as long.",
   },
 ];
 
-/** Default road network: four spokes from Quarrystone plus a ring through the corner cities. */
-export const roads: [string, string][] = [
-  ["quarrystone", "forgecross"],
-  ["quarrystone", "timberwatch"],
-  ["quarrystone", "weavemere"],
-  ["quarrystone", "hidegate"],
-  ["forgecross", "timberwatch"],
-  ["timberwatch", "hidegate"],
-  ["hidegate", "weavemere"],
-  ["weavemere", "forgecross"],
+/**
+ * WORLD_LAYOUT §3.1: the default 23×23 zone map, one character per tile, row 1 first.
+ * Q F T W H city tiles · b blue (Hearth) · y yellow (Marches) · r red fringe · R deep red ·
+ * X black wedge · # black Rim.
+ */
+export const worldTiles = [
+  "#######################",
+  "#rrrrrrrRRXXXRRrrrrrrr#",
+  "#ryyyyyrRRXXXRRryyyyyr#",
+  "#rybbbyrRRXXXRRrybbbyr#",
+  "#rybFbyrRRXXXRRrybTbyr#",
+  "#rybbbyrRRXXXRRrybbbyr#",
+  "#ryyyyyrRRRRRRRryyyyyr#",
+  "#rrrrrrrRRRRRRRrrrrrrr#",
+  "#RRRRRRRrrrrrrrRRRRRRR#",
+  "#RRRRRRRryyyyyrRRRRRRR#",
+  "#XXXXXRRrybbbyrRRXXXXX#",
+  "#XXXXXRRrybQbyrRRXXXXX#",
+  "#XXXXXRRrybbbyrRRXXXXX#",
+  "#RRRRRRRryyyyyrRRRRRRR#",
+  "#RRRRRRRrrrrrrrRRRRRRR#",
+  "#rrrrrrrRRRRRRRrrrrrrr#",
+  "#ryyyyyrRRRRRRRryyyyyr#",
+  "#rybbbyrRRXXXRRrybbbyr#",
+  "#rybWbyrRRXXXRRrybHbyr#",
+  "#rybbbyrRRXXXRRrybbbyr#",
+  "#ryyyyyrRRXXXRRryyyyyr#",
+  "#rrrrrrrRRXXXRRrrrrrrr#",
+  "#######################",
+];
+
+export type Road = { name: string; from: [number, number]; to: [number, number] };
+
+/**
+ * WORLD_LAYOUT §5: the default road network as straight runs between tile positions
+ * (0-based, A1 = (0, 0)). Every tile a road crosses keeps that tile's rules: warded in
+ * blue and yellow, open PvP and full loot in red and black.
+ */
+export const roads: Road[] = [
+  // Charter Roads: Quarrystone to each outer city, each through a red Narrows.
+  { name: "Charter Road to Forgecross", from: [11, 11], to: [4, 4] },
+  { name: "Charter Road to Timberwatch", from: [11, 11], to: [18, 4] },
+  { name: "Charter Road to Weavemere", from: [11, 11], to: [4, 18] },
+  { name: "Charter Road to Hidegate", from: [11, 11], to: [18, 18] },
+  // The Old Ring: outer city to outer city, each across a black wedge.
+  { name: "Old Ring north", from: [4, 4], to: [18, 4] },
+  { name: "Old Ring east", from: [18, 4], to: [18, 18] },
+  { name: "Old Ring south", from: [4, 18], to: [18, 18] },
+  { name: "Old Ring west", from: [4, 4], to: [4, 18] },
+  // Crown Roads: Quarrystone out to the Rim along both axes.
+  { name: "Crown Road north", from: [11, 11], to: [11, 0] },
+  { name: "Crown Road south", from: [11, 11], to: [11, 22] },
+  { name: "Crown Road west", from: [11, 11], to: [0, 11] },
+  { name: "Crown Road east", from: [11, 11], to: [22, 11] },
+];
+
+/** WORLD_LAYOUT §6–8: the three safer ways to move between cities. All three are designed, not yet built. */
+export const travel = [
+  {
+    name: "Stonewalk",
+    kind: "Paid fast travel",
+    body: "A Tollwarden sends you along the thread between Tollstones, from one server city to another. It carries you and what you wear, nothing else.",
+    points: [
+      "No cargo: resources, loose gear and trade goods stay behind",
+      "Price rises with distance and the tier of your gear",
+      "Not while in combat, just after a PvP fight, or as an Outlaw",
+    ],
+    saying: "The stone takes you, not your trade.",
+  },
+  {
+    name: "Road Bonds",
+    kind: "Player haul & escort contracts",
+    body: "Contracts sealed at the Ledger Court. Hire a Bondcarrier to haul your goods, or hire Outriders to ride beside you through the bands.",
+    points: [
+      "Carriers post collateral, so a robbed haul still pays the owner",
+      "Goods ride in Bonded Crates that can be looted on the road",
+      "A Bond Ledger rating decides how much a carrier may take",
+    ],
+    saying: "Quarrystone believes in contracts.",
+  },
+  {
+    name: "Charter Freight",
+    kind: "Insured NPC shipping",
+    body: "The Court's wagon trains carry goods along the Charter Roads for a premium. Slow, taxed and capped, so players still haul most trade.",
+    points: [
+      "Hours on the road, with fees on both ends",
+      "Insured against everything except the calamity",
+      "A Breach Scar opening near the route can still destroy the load",
+    ],
+    saying: "The Roadless leave the wagons alone. The Hollow does not.",
+  },
 ];
 
 // ── Systems ──────────────────────────────────────────────────────────────────
@@ -148,12 +229,12 @@ export const systems: System[] = [
   {
     title: "Zones & full loot",
     tag: "risk = reward",
-    body: "One open world on a 20×20 grid of 512-block tiles. Blue near the centre, black at the edges. Tile names, tiers and danger show on entry.",
+    body: "One open world on a 23×23 grid of 512-block tiles. Each city sits in a small safe pocket of blue and yellow; bands of red and black lie between the pockets, and a black Rim runs along the edge. Tile names, tiers and danger show on entry.",
     points: [
       "Flagging in yellow, knockdown and execute in red, free-for-all in black",
       "Loot bags drop everything you wore; some of it is destroyed",
       "Reputation and outlaw status for players who prey on the weak",
-      "Protected roads with waystones link the five cities",
+      "Roads are the fastest way everywhere, but protected only inside a city's ward",
     ],
   },
   {

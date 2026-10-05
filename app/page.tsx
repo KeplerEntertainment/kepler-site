@@ -16,6 +16,7 @@ import {
   skillBar,
   systems,
   tiers,
+  travel,
   zones,
   type PhaseState,
   type Zone,
@@ -68,14 +69,15 @@ export default function HomePage() {
             ))}
             <p className="slab bg-accent text-accent-ink max-w-[60ch] px-4 py-3 text-base font-semibold">
               The known land is the Kepler Reach: the square of ground the Measurers surveyed after the first wave.
-              The further from its heart you go, the richer and deadlier it gets.
+              Each city’s Tollstone wards only a small pocket around it. Between the pockets lie bands of red and
+              black ground, and the further from a Tollstone you go, the richer and deadlier it gets.
             </p>
           </div>
 
           <div className="slab p-3 sm:p-4">
             <ZoneMap />
             <p className="mt-3 font-mono text-[11px] uppercase tracking-[0.14em] opacity-70">
-              Default map / 20 × 20 tiles of 512 blocks / centre K11
+              Default map / 23 × 23 tiles of 512 blocks / centre L12
             </p>
           </div>
         </div>
@@ -111,8 +113,9 @@ export default function HomePage() {
 
         <h3 className="display mt-14 text-2xl">The five cities of the Charter</h3>
         <p className="mt-3 max-w-[60ch] opacity-80">
-          Each city is built around a Tollstone that counts down to the next wave. Each refines one resource best, so
-          trade between them is worth the road.
+          Each city is built around a Tollstone that counts down to the next wave, inside its own safe pocket. Each
+          refines one resource best, so trade between them is worth the road, and every road between them crosses red
+          ground.
         </p>
         <ul className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {cities.map((c) => (
@@ -125,6 +128,34 @@ export default function HomePage() {
               <p className="mt-1 font-semibold">{c.epithet}</p>
               <p className="mt-3 text-sm leading-relaxed opacity-80">{c.trade}</p>
               <p className="mt-4 border-l-[length:var(--bw)] border-accent-3 pl-3 text-sm italic">“{c.proverb}”</p>
+            </li>
+          ))}
+        </ul>
+
+        <h3 className="display mt-14 text-2xl">Roads, and the ways around them</h3>
+        <p className="mt-3 max-w-[60ch] opacity-80">
+          Roads stay the fastest way to travel, but they are protected only inside the wards. Past the Ward Posts a
+          road is ordinary red or black ground: open PvP, full loot, and everyone knows the route. Three services are
+          designed for people who would rather not risk it. None of them is built yet.
+        </p>
+        <ul className="mt-6 grid gap-5 lg:grid-cols-3">
+          {travel.map((t) => (
+            <li key={t.name} className="slab p-5">
+              <div className="flex flex-wrap items-center gap-2">
+                <Chip tone="accent">{t.kind}</Chip>
+                <Chip>designed</Chip>
+              </div>
+              <h4 className="display mt-4 text-2xl">{t.name}</h4>
+              <p className="mt-3 text-sm leading-relaxed opacity-80">{t.body}</p>
+              <ul className="mt-4 space-y-1.5 text-sm">
+                {t.points.map((p) => (
+                  <li key={p} className="flex gap-2">
+                    <span aria-hidden="true" className="mt-1.5 inline-block h-2 w-2 shrink-0 bg-ink" />
+                    <span>{p}</span>
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-4 border-l-[length:var(--bw)] border-accent-3 pl-3 text-sm italic">“{t.saying}”</p>
             </li>
           ))}
         </ul>

@@ -14,7 +14,7 @@ Live at **https://keplerentertainment.github.io/kepler-site/**
 One page with anchored sections:
 
 1. **Hero** - the pitch and the current status.
-2. **The world** - the premise, the zone tiers drawn on the default 20×20 map, the five cities.
+2. **The world** - the premise, the default 23×23 map of city pockets, bands and roads, the five cities and the travel services.
 3. **Systems** - the core loop, economy, zones and full loot, kingdoms and sieges, dungeons,
    calamity waves, quests, BlueMap and custom content.
 4. **Races & classes** - the ten biome races, fifteen classes, seven-slot skill bar and skill tiers.

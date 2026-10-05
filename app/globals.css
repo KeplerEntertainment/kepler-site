@@ -1,0 +1,130 @@
+@import "tailwindcss";
+
+/* The design system is the portfolio's (portfolio-v2): neo-brutalist, hard
+   outlines, a solid offset shadow, flat saturated fills. In the portfolio these
+   values arrive from a generated /theme.css; a static site has no server to
+   generate it, so the portfolio's default theme is written out here instead. */
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-ink: var(--ink);
+  --color-panel: var(--panel);
+  --color-accent: var(--accent);
+  --color-accent-2: var(--accent-2);
+  --color-accent-3: var(--accent-3);
+  --color-accent-ink: var(--accent-ink);
+  --font-display: var(--display);
+  --font-body: var(--body);
+}
+
+:root {
+  --bg: #f4f1e8;
+  --ink: #121212;
+  --panel: #ffffff;
+  --accent: #ffd400;
+  --accent-2: #2a66dc;
+  --accent-3: #ff5c37;
+  --accent-ink: #121212;
+  --bw: 3px;
+  --shadow: 6px;
+  --radius: 0px;
+  --display: var(--font-archivo);
+  --body: var(--font-space);
+  --heading-case: uppercase;
+  color-scheme: light;
+}
+
+* {
+  border-color: var(--ink);
+}
+
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 7rem;
+  background: var(--bg);
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--body);
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    transition: none !important;
+    animation: none !important;
+  }
+}
+
+::selection {
+  background: var(--ink);
+  color: var(--bg);
+}
+
+:focus-visible {
+  outline: var(--bw) solid var(--accent-2);
+  outline-offset: 2px;
+}
+
+/* ── the neo-brutalist primitives (unchanged from the portfolio) ─────────── */
+
+/* A slab: hard outline plus a solid offset shadow. The whole language is this. */
+.slab {
+  border: var(--bw) solid var(--ink);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow) var(--shadow) 0 0 var(--ink);
+  background: var(--panel);
+}
+
+/* Presses into the page on click, the way a physical key would. */
+.slab-press {
+  transition:
+    transform 0.08s linear,
+    box-shadow 0.08s linear;
+}
+@media (hover: hover) {
+  .slab-press:hover {
+    transform: translate(calc(var(--shadow) / -3), calc(var(--shadow) / -3));
+    box-shadow: calc(var(--shadow) * 1.35) calc(var(--shadow) * 1.35) 0 0 var(--ink);
+  }
+}
+.slab-press:active {
+  transform: translate(var(--shadow), var(--shadow));
+  box-shadow: 0 0 0 0 var(--ink);
+}
+
+.rule {
+  border-top: var(--bw) solid var(--ink);
+}
+
+.display {
+  font-family: var(--display);
+  text-transform: var(--heading-case);
+  line-height: 0.95;
+  letter-spacing: -0.02em;
+}
+
+/* Underline that thickens on hover, instead of a colour change. */
+.ul-link {
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 4px;
+}
+.ul-link:hover {
+  text-decoration-thickness: 5px;
+}
+
+/* Long words in headings (KeplerCore, Dunestrider) must wrap on a phone. */
+h1,
+h2,
+h3 {
+  overflow-wrap: anywhere;
+}

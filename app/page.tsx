@@ -9,6 +9,7 @@ import {
   blightLevels,
   cities,
   classes,
+  mapCredit,
   coreLoop,
   premise,
   races,
@@ -68,16 +69,32 @@ export default function HomePage() {
               </p>
             ))}
             <p className="slab bg-accent text-accent-ink max-w-[60ch] px-4 py-3 text-base font-semibold">
-              The known land is the Kepler Reach: the square of ground the Measurers surveyed after the first wave.
-              Each city’s Tollstone wards only a small pocket around it. Between the pockets lie bands of red and
-              black ground, and the further from a Tollstone you go, the richer and deadlier it gets.
+              The known land is Aldara, a continent about 20,000 by 22,000 blocks: a snowy north under an ice cap,
+              a temperate heartland of forests, lakes and ridges, red deserts and canyons in the south-east, and a
+              bayou and jungle isles along the south. Each city’s Tollstone wards only a small pocket around it.
+              Between the pockets lie bands of red and black ground, and the further from a Tollstone you go, the
+              richer and deadlier it gets.
+            </p>
+            <p className="max-w-[60ch] text-base opacity-80">
+              Every one of the ten races has a homeland somewhere on it: the Frostvein on the ice cap, the Cinderborn
+              by the calderas outside Forgecross, the Mirefolk in the bayou, the Vinereach on the jungle isles. Most
+              of that ground is red or black, so holding it takes a fight.
             </p>
           </div>
 
           <div className="slab p-3 sm:p-4">
             <ZoneMap />
             <p className="mt-3 font-mono text-[11px] uppercase tracking-[0.14em] opacity-70">
-              Default map / 23 × 23 tiles of 512 blocks / centre L12
+              Kepler zones on the Aldara map (draft, coordinates being verified) / 42 × 44 tiles of 512 blocks
+            </p>
+            <p className="mt-2 text-xs leading-relaxed">
+              World map:{" "}
+              <a href={mapCredit.url} className="ul-link font-semibold" target="_blank" rel="noopener noreferrer">
+                {mapCredit.title}
+                <span className="sr-only"> (opens in a new tab)</span>
+              </a>{" "}
+              by {mapCredit.author}. The schematic above is drawn by Kepler from its own tile sheet; it is not the
+              author’s render.
             </p>
           </div>
         </div>
@@ -280,6 +297,7 @@ export default function HomePage() {
             <li key={r.name} className="slab p-4">
               <p className="font-mono text-[11px] uppercase tracking-[0.14em] opacity-70">{r.home}</p>
               <h4 className="display mt-2 text-lg">{r.name}</h4>
+              <p className="mt-1 text-xs opacity-70">On Aldara: {r.land}</p>
               <div className="mt-3 flex flex-wrap gap-1.5">
                 <ElementChip element={r.primary} />
                 <ElementChip element={r.secondary} />

@@ -1,55 +1,94 @@
-import { cities, roads, worldTiles } from "@/lib/content";
+import { aldaraTiles, cities, regions, roads, tileXY } from "@/lib/content";
 
-const N = worldTiles.length; // 23 tiles per side on the default map
-const CELL = 20; // svg units per tile
-const SIZE = N * CELL;
+/**
+ * A schematic of the Aldara continent drawn from Kepler's own zone sheet (one square per 512-block tile).
+ * It is not a render of the map: land and sea come from the sheet's sea flag, colours from the zone classes.
+ */
 
-/** Map characters (WORLD_LAYOUT §3.1) grouped into the classes the map draws. */
-type TileClass = "city" | "blue" | "yellow" | "fringe" | "deep" | "wedge" | "rim";
+const COLS = aldaraTiles[0].length; // 42 (A … AP)
+const ROWS = aldaraTiles.length; // 44
+const CELL = 10; // svg units per tile
+const W = COLS * CELL;
+const H = ROWS * CELL;
 
-const CLASS: Record<string, TileClass> = {
-  Q: "city",
-  F: "city",
-  T: "city",
-  W: "city",
-  H: "city",
+type ZoneClass = "city" | "blue" | "yellow" | "fringe" | "deep" | "seam" | "wilds" | "rim";
+interface Tile {
+  cls: ZoneClass;
+  sea: boolean;
+}
+
+const LAND: Record<string, ZoneClass> = {
+  C: "city",
   b: "blue",
   y: "yellow",
   r: "fringe",
   R: "deep",
-  X: "wedge",
+  x: "seam",
+  X: "wilds",
   "#": "rim",
 };
+const SEA: Record<string, ZoneClass> = {
+  B: "blue",
+  Y: "yellow",
+  f: "fringe",
+  d: "deep",
+  s: "seam",
+  w: "wilds",
+  ".": "rim",
+};
+
+function tileAt(x: number, y: number): Tile {
+  const ch = aldaraTiles[y]?.[x] ?? ".";
+  if (ch in LAND) return { cls: LAND[ch], sea: false };
+  return { cls: SEA[ch] ?? "rim", sea: true };
+}
 
 /** The palette's own colours double as zone colours: blue, yellow, red, ink. */
-const FILL: Record<TileClass, string> = {
+const FILL: Record<ZoneClass, string> = {
   city: "var(--accent-2)",
   blue: "var(--accent-2)",
   yellow: "var(--accent)",
   fringe: "var(--accent-3)",
   deep: "var(--accent-3)",
-  wedge: "var(--ink)",
+  seam: "var(--ink)",
+  wilds: "var(--ink)",
   rim: "var(--ink)",
 };
 
-/** The red fringe is the same red, lighter, so the band reads as fringe then deep. */
-const opacityOf = (cls: TileClass) => (cls === "fringe" ? 0.55 : 1);
+/** Land is solid; the red fringe is a lighter red so the band reads fringe then deep. Sea is the same zone, paler. */
+function opacityOf(t: Tile): number {
+  if (!t.sea) return t.cls === "fringe" ? 0.55 : 1;
+  switch (t.cls) {
+    case "blue":
+    case "yellow":
+      return 0.4;
+    case "fringe":
+      return 0.2;
+    case "deep":
+      return 0.32;
+    case "seam":
+    case "wilds":
+      return 0.24;
+    default:
+      return 0.09; // the Deep
+  }
+}
 
-const classAt = (x: number, y: number): TileClass => CLASS[worldTiles[y][x]];
+/** Black seams carry a dot pattern, the Rim a red hatch, so the three blacks stay apart. */
+const PATTERN: Partial<Record<ZoneClass, string>> = {
+  seam: "url(#zonemap-seam)",
+  rim: "url(#zonemap-rim)",
+};
 
-/** A road is protected only on city, blue and yellow tiles (WORLD_LAYOUT §5). */
+/** A road is protected only on city, blue and yellow tiles (WORLD_LAYOUT §5, unchanged on Aldara). */
 type Stretch = "warded" | "red" | "black";
-function stretchAt(x: number, y: number): Stretch {
-  const c = classAt(x, y);
-  if (c === "city" || c === "blue" || c === "yellow") return "warded";
-  if (c === "fringe" || c === "deep") return "red";
+function stretchOf(t: Tile): Stretch {
+  if (t.cls === "city" || t.cls === "blue" || t.cls === "yellow") return "warded";
+  if (t.cls === "fringe" || t.cls === "deep") return "red";
   return "black";
 }
 
-const mid = (i: number) => i * CELL + CELL / 2;
-
-/** One piece of road per tile it crosses, from the half-way point before the tile to the half-way point after. */
-interface Piece {
+interface Run {
   key: string;
   x1: number;
   y1: number;
@@ -58,90 +97,184 @@ interface Piece {
   stretch: Stretch;
 }
 
-function roadPieces(): Piece[] {
-  const pieces: Piece[] = [];
-  for (const r of roads) {
-    const [ax, ay] = r.from;
-    const [bx, by] = r.to;
-    const sx = Math.sign(bx - ax);
-    const sy = Math.sign(by - ay);
-    const steps = Math.max(Math.abs(bx - ax), Math.abs(by - ay));
-    for (let i = 0; i <= steps; i++) {
-      const x = ax + sx * i;
-      const y = ay + sy * i;
-      const back = i === 0 ? 0 : 0.5;
-      const fwd = i === steps ? 0 : 0.5;
-      pieces.push({
-        key: `${r.name}-${i}`,
-        x1: mid(x) - sx * back * CELL,
-        y1: mid(y) - sy * back * CELL,
-        x2: mid(x) + sx * fwd * CELL,
-        y2: mid(y) + sy * fwd * CELL,
-        stretch: stretchAt(x, y),
-      });
+const centre = (i: number) => i * CELL + CELL / 2;
+
+/**
+ * Each road leg runs straight from tile centre to tile centre. It is sampled finely and cut into runs
+ * wherever the ground under it changes protection, so the dashes start at the ward line.
+ */
+function roadRuns(): Run[] {
+  const runs: Run[] = [];
+  for (const road of roads) {
+    const pts = road.via.map(tileXY);
+    for (let leg = 0; leg < pts.length - 1; leg++) {
+      const [ax, ay] = pts[leg];
+      const [bx, by] = pts[leg + 1];
+      const steps = Math.max(Math.abs(bx - ax), Math.abs(by - ay)) * 8;
+      const at = (i: number): [number, number] => [ax + ((bx - ax) * i) / steps, ay + ((by - ay) * i) / steps];
+      let start = 0;
+      let current: Stretch | null = null;
+      for (let i = 0; i < steps; i++) {
+        const [mx, my] = at(i + 0.5);
+        const s = stretchOf(tileAt(Math.round(mx), Math.round(my)));
+        if (current === null) current = s;
+        if (s !== current) {
+          const [x1, y1] = at(start);
+          const [x2, y2] = at(i);
+          runs.push({ key: `${road.name}-${leg}-${start}`, x1, y1, x2, y2, stretch: current });
+          start = i;
+          current = s;
+        }
+      }
+      const [x1, y1] = at(start);
+      runs.push({ key: `${road.name}-${leg}-${start}`, x1, y1, x2: bx, y2: by, stretch: current ?? "warded" });
     }
   }
-  return pieces;
+  return runs.map((r) => ({ ...r, x1: centre(r.x1), y1: centre(r.y1), x2: centre(r.x2), y2: centre(r.y2) }));
+}
+
+/** Coastline: every edge between a land tile and a sea tile, as one path. */
+function coastPath(): string {
+  const d: string[] = [];
+  for (let y = 0; y < ROWS; y++) {
+    for (let x = 0; x < COLS; x++) {
+      if (tileAt(x, y).sea) continue;
+      const px = x * CELL;
+      const py = y * CELL;
+      if (y === 0 || tileAt(x, y - 1).sea) d.push(`M${px} ${py}h${CELL}`);
+      if (y === ROWS - 1 || tileAt(x, y + 1).sea) d.push(`M${px} ${py + CELL}h${CELL}`);
+      if (x === 0 || tileAt(x - 1, y).sea) d.push(`M${px} ${py}v${CELL}`);
+      if (x === COLS - 1 || tileAt(x + 1, y).sea) d.push(`M${px + CELL} ${py}v${CELL}`);
+    }
+  }
+  return d.join("");
 }
 
 /** Road styling: warded stretches are solid, unwarded ones dashed; the casing keeps each readable on its ground. */
 const ROAD: Record<Stretch, { casing: string; core: string; dash?: string }> = {
   warded: { casing: "var(--ink)", core: "var(--panel)" },
-  red: { casing: "var(--ink)", core: "var(--panel)", dash: "3 3" },
-  black: { casing: "var(--accent-3)", core: "var(--panel)", dash: "3 3" },
+  red: { casing: "var(--ink)", core: "var(--panel)", dash: "2.5 2.5" },
+  black: { casing: "var(--accent-3)", core: "var(--panel)", dash: "2.5 2.5" },
 };
 
-// Where each label sits relative to its city marker, so none sits on a road.
+// Where each city label sits relative to its marker, so none sits on a road.
 const LABEL: Record<string, { dx: number; dy: number; anchor: "start" | "middle" | "end" }> = {
-  forgecross: { dx: 0, dy: -15, anchor: "middle" },
-  timberwatch: { dx: 0, dy: -15, anchor: "middle" },
-  quarrystone: { dx: 32, dy: 18, anchor: "start" },
-  weavemere: { dx: 0, dy: 26, anchor: "middle" },
-  hidegate: { dx: 0, dy: 26, anchor: "middle" },
+  forgecross: { dx: -9, dy: -9, anchor: "end" },
+  timberwatch: { dx: 9, dy: -9, anchor: "start" },
+  quarrystone: { dx: 11, dy: 4, anchor: "start" },
+  weavemere: { dx: -10, dy: 4, anchor: "end" },
+  hidegate: { dx: 0, dy: 21, anchor: "middle" },
 };
 
-const LEGEND_TILES: { cls: TileClass; label: string }[] = [
+const LEGEND_LAND: { cls: ZoneClass; label: string }[] = [
   { cls: "blue", label: "City and its Hearth (blue)" },
   { cls: "yellow", label: "The Marches (yellow)" },
   { cls: "fringe", label: "Red fringe, T5–T6" },
   { cls: "deep", label: "Deep red, T5–T7" },
-  { cls: "wedge", label: "Black wedge, T6–T8" },
-  { cls: "rim", label: "The Rim (black), T7–T8" },
+  { cls: "seam", label: "Black seam between two cities, T6–T8" },
+  { cls: "wilds", label: "Black wilds, T6–T8" },
+  { cls: "rim", label: "The Rim: black frontier, T7–T8" },
 ];
 
-const LEGEND_ROADS: { stretch: Stretch; ground: TileClass; label: string }[] = [
-  { stretch: "warded", ground: "yellow", label: "Road in blue/yellow: protected" },
-  { stretch: "red", ground: "deep", label: "Road in red: open PvP, full loot" },
-  { stretch: "black", ground: "wedge", label: "Road in black: free-for-all" },
+const SEA_SAMPLE: Tile[] = [
+  { cls: "yellow", sea: true },
+  { cls: "deep", sea: true },
+  { cls: "wilds", sea: true },
+  { cls: "rim", sea: true },
 ];
 
-function TileSwatch({ cls }: { cls: TileClass }) {
+const LEGEND_ROADS: { stretch: Stretch; ground: Tile; label: string }[] = [
+  { stretch: "warded", ground: { cls: "yellow", sea: false }, label: "Road in blue/yellow: protected" },
+  { stretch: "red", ground: { cls: "deep", sea: false }, label: "Road in red: open PvP, full loot" },
+  { stretch: "black", ground: { cls: "wilds", sea: false }, label: "Road in black: free-for-all" },
+];
+
+function Square({ t, x = 0.75, size = 12.5 }: { t: Tile; x?: number; size?: number }) {
+  const pattern = PATTERN[t.cls];
+  return (
+    <>
+      <rect x={x} y={0.75} width={size} height={12.5} fill="var(--panel)" />
+      <rect x={x} y={0.75} width={size} height={12.5} fill={FILL[t.cls]} fillOpacity={opacityOf(t)} />
+      {pattern && !t.sea && <rect x={x} y={0.75} width={size} height={12.5} fill={pattern} />}
+    </>
+  );
+}
+
+function TileSwatch({ cls }: { cls: ZoneClass }) {
   return (
     <svg viewBox="0 0 14 14" className="h-3.5 w-3.5 shrink-0" aria-hidden="true">
-      <rect x={0.75} y={0.75} width={12.5} height={12.5} fill="var(--panel)" />
-      <rect x={0.75} y={0.75} width={12.5} height={12.5} fill={FILL[cls]} fillOpacity={opacityOf(cls)} />
-      {cls === "rim" && <rect x={0.75} y={0.75} width={12.5} height={12.5} fill="url(#zonemap-rim)" />}
+      <Square t={{ cls, sea: false }} />
       <rect x={0.75} y={0.75} width={12.5} height={12.5} fill="none" stroke="var(--ink)" strokeWidth={1.5} />
     </svg>
   );
 }
 
-function RoadSwatch({ stretch, ground }: { stretch: Stretch; ground: TileClass }) {
+/** Four paler sea samples side by side: harbour, red, black and the open Deep. */
+function SeaSwatch() {
+  return (
+    <svg viewBox="0 0 28 14" className="h-3.5 w-7 shrink-0" aria-hidden="true">
+      {SEA_SAMPLE.map((t, i) => (
+        <Square key={t.cls} t={t} x={0.75 + i * 6.625} size={6.625} />
+      ))}
+      <rect x={0.75} y={0.75} width={26.5} height={12.5} fill="none" stroke="var(--ink)" strokeWidth={1.5} />
+    </svg>
+  );
+}
+
+function RoadSwatch({ stretch, ground }: { stretch: Stretch; ground: Tile }) {
   const s = ROAD[stretch];
   return (
     <svg viewBox="0 0 28 14" className="h-3.5 w-7 shrink-0" aria-hidden="true">
-      <rect x={0.75} y={0.75} width={26.5} height={12.5} fill={FILL[ground]} stroke="var(--ink)" strokeWidth={1.5} />
+      <rect x={0.75} y={0.75} width={26.5} height={12.5} fill={FILL[ground.cls]} stroke="var(--ink)" strokeWidth={1.5} />
       <line x1={1.5} y1={7} x2={26.5} y2={7} stroke={s.casing} strokeWidth={5} />
-      <line x1={1.5} y1={7} x2={26.5} y2={7} stroke={s.core} strokeWidth={2} strokeDasharray={s.dash} />
+      <line x1={1.5} y1={7} x2={26.5} y2={7} stroke={s.core} strokeWidth={2} strokeDasharray={s.dash ? "3 3" : undefined} />
     </svg>
+  );
+}
+
+/** Halo text: light letters on an ink outline read on every zone colour. */
+function Label({
+  x,
+  y,
+  size,
+  anchor = "middle",
+  italic = false,
+  children,
+}: {
+  x: number;
+  y: number;
+  size: number;
+  anchor?: "start" | "middle" | "end";
+  italic?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <text
+      x={x}
+      y={y}
+      textAnchor={anchor}
+      fontFamily={italic ? "var(--body)" : "var(--display)"}
+      fontSize={size}
+      fontStyle={italic ? "italic" : undefined}
+      fontWeight={italic ? 700 : undefined}
+      fill="var(--panel)"
+      stroke="var(--ink)"
+      strokeWidth={italic ? 2.6 : 3.4}
+      strokeLinejoin="round"
+      paintOrder="stroke"
+      style={italic ? undefined : { textTransform: "uppercase" }}
+    >
+      {children}
+    </text>
   );
 }
 
 export default function ZoneMap() {
   const tiles = [];
-  for (let y = 0; y < N; y++) {
-    for (let x = 0; x < N; x++) {
-      const cls = classAt(x, y);
+  for (let y = 0; y < ROWS; y++) {
+    for (let x = 0; x < COLS; x++) {
+      const t = tileAt(x, y);
+      if (t.sea && t.cls === "rim") continue; // the open Deep is the background
       tiles.push(
         <rect
           key={`${x}-${y}`}
@@ -149,56 +282,65 @@ export default function ZoneMap() {
           y={y * CELL}
           width={CELL}
           height={CELL}
-          fill={FILL[cls]}
-          fillOpacity={opacityOf(cls)}
-          stroke="var(--bg)"
-          strokeOpacity={0.35}
-          strokeWidth={0.75}
+          fill={FILL[t.cls]}
+          fillOpacity={opacityOf(t)}
         />,
       );
-      if (cls === "rim") {
-        tiles.push(
-          <rect key={`${x}-${y}-rim`} x={x * CELL} y={y * CELL} width={CELL} height={CELL} fill="url(#zonemap-rim)" />,
-        );
+      const pattern = PATTERN[t.cls];
+      if (pattern && !t.sea) {
+        tiles.push(<rect key={`${x}-${y}-p`} x={x * CELL} y={y * CELL} width={CELL} height={CELL} fill={pattern} />);
       }
     }
   }
 
-  const pieces = roadPieces();
+  const runs = roadRuns();
 
   return (
     <div>
       <svg
-        viewBox={`-4 -4 ${SIZE + 8} ${SIZE + 8}`}
+        viewBox={`-4 -4 ${W + 8} ${H + 8}`}
         role="img"
         aria-labelledby="zonemap-title zonemap-desc"
         className="block h-auto w-full"
       >
-        <title id="zonemap-title">The default Kepler map: a 23 by 23 grid of zone tiles with five city pockets</title>
+        <title id="zonemap-title">
+          Schematic of the Aldara continent with Kepler&apos;s zones: 42 by 44 tiles of 512 blocks and five city
+          pockets (draft)
+        </title>
         <desc id="zonemap-desc">
-          Each of the five server cities sits in its own safe pocket: the city tile, a ring of blue tiles, then a ring
-          of yellow tiles. Quarrystone is in the centre at L12, Forgecross in the north-west at E5, Timberwatch in the
-          north-east at S5, Weavemere in the south-west at E19 and Hidegate in the south-east at S19. Red bands
-          separate the pockets, a lighter red fringe next to each pocket and deep red beyond it. Black wedges lie
-          between neighbouring outer cities to the north, east, south and west, and a black Rim runs along the whole
-          edge of the map. Charter Roads run diagonally from Quarrystone to each outer city across two red tiles; the
-          Old Ring joins the outer cities through red and black; Crown Roads run from Quarrystone along both axes out
-          to the Rim. Roads are protected only where they cross blue and yellow tiles; on red and black tiles they are
-          unprotected and drawn dashed.
+          A draft schematic drawn from Kepler&apos;s tile sheet, one square per 512-block tile; coordinates are still
+          being verified in game. Aldara is a continent in an open sea, a little taller than it is wide. Its north is an
+          ice cap, all black Rim. Forgecross sits in the snowy mountains of the north-west at tile O13 and Timberwatch
+          in the northern pine wood at Z13. Quarrystone is in the centre at X22, under the central ridge, with the
+          Glassmere inland sea to its north-east. Weavemere is on the bayou shore of the south coast at S30 and
+          Hidegate in the south-east at AB33, where savanna meets the red deserts and the canyon. Each city has a small
+          safe pocket of blue and yellow tiles; red ground surrounds every pocket, and black seams run between
+          neighbouring cities, so every road between two cities crosses red and black. The Western Wilds, the outer
+          deserts, the southern jungle isles and the Shattered Isles in the south-west are black frontier. Sea tiles
+          carry the zone of the nearest ground and are drawn paler. Eight roads join the cities: four spokes from
+          Quarrystone and four ring roads. Roads are protected only on blue and yellow tiles, drawn solid; on red and
+          black tiles they are unprotected and drawn dashed.
         </desc>
 
         <defs>
-          <pattern id="zonemap-rim" width={5} height={5} patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
-            <line x1={0} y1={0} x2={0} y2={5} stroke="var(--accent-3)" strokeWidth={1.25} strokeOpacity={0.55} />
+          <pattern id="zonemap-rim" width={4} height={4} patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+            <line x1={0} y1={0} x2={0} y2={4} stroke="var(--accent-3)" strokeWidth={1} strokeOpacity={0.55} />
+          </pattern>
+          <pattern id="zonemap-seam" width={3.5} height={3.5} patternUnits="userSpaceOnUse">
+            <circle cx={1.75} cy={1.75} r={0.75} fill="var(--accent)" fillOpacity={0.75} />
           </pattern>
         </defs>
 
-        <rect x={-2} y={-2} width={SIZE + 4} height={SIZE + 4} fill="var(--panel)" stroke="var(--ink)" strokeWidth={4} />
-        {tiles}
+        <rect x={-2} y={-2} width={W + 4} height={H + 4} fill="var(--panel)" />
+        <rect x={-2} y={-2} width={W + 4} height={H + 4} fill="var(--ink)" fillOpacity={0.09} />
+        <g shapeRendering="crispEdges">{tiles}</g>
+
+        {/* Coastline at tile resolution */}
+        <path d={coastPath()} fill="none" stroke="var(--ink)" strokeWidth={1.4} strokeLinecap="square" />
 
         {/* Roads: a casing under a light core. Solid where warded, dashed where not. */}
-        <g strokeLinecap="square">
-          {pieces.map((p) => (
+        <g strokeLinecap="round">
+          {runs.map((p) => (
             <line
               key={`${p.key}-case`}
               x1={p.x1}
@@ -206,12 +348,12 @@ export default function ZoneMap() {
               x2={p.x2}
               y2={p.y2}
               stroke={ROAD[p.stretch].casing}
-              strokeWidth={5}
+              strokeWidth={4}
             />
           ))}
         </g>
         <g>
-          {pieces.map((p) => (
+          {runs.map((p) => (
             <line
               key={p.key}
               x1={p.x1}
@@ -219,45 +361,47 @@ export default function ZoneMap() {
               x2={p.x2}
               y2={p.y2}
               stroke={ROAD[p.stretch].core}
-              strokeWidth={2}
+              strokeWidth={1.6}
               strokeDasharray={ROAD[p.stretch].dash}
             />
           ))}
         </g>
 
+        {regions.map((r) => (
+          <Label key={r.name} x={r.x * CELL} y={r.y * CELL} size={10} italic>
+            {r.name}
+          </Label>
+        ))}
+
         {cities.map((c) => {
+          const [x, y] = tileXY(c.tile);
           const l = LABEL[c.id];
-          const cx = mid(c.x);
-          const cy = mid(c.y);
+          const cx = centre(x);
+          const cy = centre(y);
           return (
             <g key={c.id}>
-              <rect x={cx - 7} y={cy - 7} width={14} height={14} fill="var(--panel)" stroke="var(--ink)" strokeWidth={3} />
-              <text
-                x={cx + l.dx}
-                y={cy + l.dy}
-                textAnchor={l.anchor}
-                fontFamily="var(--display)"
-                fontSize={12}
-                fill="var(--panel)"
-                stroke="var(--ink)"
-                strokeWidth={4}
-                paintOrder="stroke"
-                style={{ textTransform: "uppercase" }}
-              >
+              <rect x={cx - 5.5} y={cy - 5.5} width={11} height={11} fill="var(--panel)" stroke="var(--ink)" strokeWidth={2.5} />
+              <Label x={cx + l.dx} y={cy + l.dy} size={12} anchor={l.anchor}>
                 {c.name}
-              </text>
+              </Label>
             </g>
           );
         })}
+
+        <rect x={-2} y={-2} width={W + 4} height={H + 4} fill="none" stroke="var(--ink)" strokeWidth={4} />
       </svg>
 
       <ul className="mt-3 grid gap-x-4 gap-y-1.5 text-xs sm:grid-cols-2" aria-label="Map legend">
-        {LEGEND_TILES.map((t) => (
+        {LEGEND_LAND.map((t) => (
           <li key={t.cls} className="flex items-center gap-2">
             <TileSwatch cls={t.cls} />
             <span>{t.label}</span>
           </li>
         ))}
+        <li className="flex items-center gap-2">
+          <SeaSwatch />
+          <span>Sea keeps the zone of its coast, drawn paler; palest is the open Deep (black)</span>
+        </li>
         {LEGEND_ROADS.map((r) => (
           <li key={r.stretch} className="flex items-center gap-2">
             <RoadSwatch stretch={r.stretch} ground={r.ground} />

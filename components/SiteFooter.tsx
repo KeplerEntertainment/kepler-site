@@ -1,3 +1,4 @@
+import { mapCredit } from "@/lib/content";
 import { site, type NavItem } from "@/lib/site";
 
 const ROWS: { label: string; value: React.ReactNode }[] = [
@@ -12,6 +13,18 @@ const ROWS: { label: string; value: React.ReactNode }[] = [
   },
   { label: "source", value: <span className="font-medium">Private repositories, one per plugin</span> },
   { label: "platform", value: <span className="font-medium">{site.platform}</span> },
+  {
+    label: "world map",
+    value: (
+      <span className="font-medium">
+        <a href={mapCredit.url} className="ul-link" target="_blank" rel="noopener noreferrer">
+          {mapCredit.title}
+          <span className="sr-only"> (opens in a new tab)</span>
+        </a>{" "}
+        by {mapCredit.author}
+      </span>
+    ),
+  },
 ];
 
 export default function SiteFooter({ nav }: { nav: NavItem[] }) {

@@ -36,25 +36,21 @@ export interface City {
   id: string;
   name: string;
   epithet: string;
+  /** City tile on the Aldara grid (WORLD_ALDARA §3). */
   tile: string;
-  /** 0-based grid position on the default 23×23 map: A1 is (0, 0). */
-  x: number;
-  y: number;
   ground: string;
   trade: string;
   proverb: string;
 }
 
-/** DESIGN §14 for function, WORLD_LAYOUT §2 for tiles, LORE §6 and docs/lore/cities for names and voice. */
+/** DESIGN §14 for function, WORLD_ALDARA §3 for tiles and terrain, LORE §6 and docs/lore/cities for names and voice. */
 export const cities: City[] = [
   {
     id: "forgecross",
     name: "Forgecross",
     epithet: "the Anvil of the Charter",
-    tile: "E5",
-    x: 4,
-    y: 4,
-    ground: "North-west, mountains",
+    tile: "O13",
+    ground: "North-west, snowy peaks and calderas",
     trade: "Ore into metal bars. Plate armour, swords, maces, hammers, pickaxes.",
     proverb: "Steel does not fail. People do.",
   },
@@ -62,10 +58,8 @@ export const cities: City[] = [
     id: "timberwatch",
     name: "Timberwatch",
     epithet: "the Green Wall",
-    tile: "S5",
-    x: 18,
-    y: 4,
-    ground: "North-east, forest",
+    tile: "Z13",
+    ground: "North, the great pine wood",
     trade: "Wood into planks. Bows, crossbows, spears, staves, furniture.",
     proverb: "Grow nothing you cannot tend.",
   },
@@ -73,10 +67,8 @@ export const cities: City[] = [
     id: "quarrystone",
     name: "Quarrystone",
     epithet: "the Crossroads Crown",
-    tile: "L12",
-    x: 11,
-    y: 11,
-    ground: "Centre, the hub of every road",
+    tile: "X22",
+    ground: "Centre, under the central ridge",
     trade: "Stone into blocks. Tools, food, potions, facility kits, mounts. Home of the black market.",
     proverb: "Write it down, so we fail differently next time.",
   },
@@ -84,10 +76,8 @@ export const cities: City[] = [
     id: "weavemere",
     name: "Weavemere",
     epithet: "the Loom of Lakes",
-    tile: "E19",
-    x: 4,
-    y: 18,
-    ground: "South-west, wetlands",
+    tile: "S30",
+    ground: "South-west, the bayou shore",
     trade: "Fibre into cloth. Cloth armour, every staff, capes, tomes.",
     proverb: "Ask quietly. The water carries.",
   },
@@ -95,70 +85,118 @@ export const cities: City[] = [
     id: "hidegate",
     name: "Hidegate",
     epithet: "the Banner Gate",
-    tile: "S19",
-    x: 18,
-    y: 18,
-    ground: "South-east, plains",
+    tile: "AB33",
+    ground: "South-east, savanna and red desert",
     trade: "Hide into leather. Leather armour, daggers, axes, bags, saddles.",
     proverb: "A road shared is half as long.",
   },
 ];
 
+/** Tile id ("A1" … "AP44") to a 0-based [column, row]: A1 is [0, 0], AB33 is [27, 32]. */
+export function tileXY(id: string): [number, number] {
+  const m = /^([A-Z]+)(\d+)$/.exec(id);
+  if (!m) throw new Error(`bad tile id ${id}`);
+  let col = 0;
+  for (const ch of m[1]) col = col * 26 + (ch.charCodeAt(0) - 64);
+  return [col - 1, Number(m[2]) - 1];
+}
+
 /**
- * WORLD_LAYOUT §3.1: the default 23×23 zone map, one character per tile, row 1 first.
- * Q F T W H city tiles · b blue (Hearth) · y yellow (Marches) · r red fringe · R deep red ·
- * X black wedge · # black Rim.
+ * WORLD_ALDARA §4 and docs/world/aldara-tiles-draft.yml: the Aldara zone sheet, 42 columns (A … AP) by
+ * 44 rows of 512-block tiles, one character per tile, row 1 first. A draft: the calibration is still
+ * being checked in game.
+ *
+ * Land:  C city · b blue Hearth · y yellow Marches · r red fringe · R deep red ·
+ *        x black seam · X black wilds · # black Rim.
+ * Sea:   B blue · Y yellow (harbour water) · f red fringe · d deep red · s black seam ·
+ *        w black wilds · . the Deep (Rim).
  */
-export const worldTiles = [
-  "#######################",
-  "#rrrrrrrRRXXXRRrrrrrrr#",
-  "#ryyyyyrRRXXXRRryyyyyr#",
-  "#rybbbyrRRXXXRRrybbbyr#",
-  "#rybFbyrRRXXXRRrybTbyr#",
-  "#rybbbyrRRXXXRRrybbbyr#",
-  "#ryyyyyrRRRRRRRryyyyyr#",
-  "#rrrrrrrRRRRRRRrrrrrrr#",
-  "#RRRRRRRrrrrrrrRRRRRRR#",
-  "#RRRRRRRryyyyyrRRRRRRR#",
-  "#XXXXXRRrybbbyrRRXXXXX#",
-  "#XXXXXRRrybQbyrRRXXXXX#",
-  "#XXXXXRRrybbbyrRRXXXXX#",
-  "#RRRRRRRryyyyyrRRRRRRR#",
-  "#RRRRRRRrrrrrrrRRRRRRR#",
-  "#rrrrrrrRRRRRRRrrrrrrr#",
-  "#ryyyyyrRRRRRRRryyyyyr#",
-  "#rybbbyrRRXXXRRrybbbyr#",
-  "#rybWbyrRRXXXRRrybHbyr#",
-  "#rybbbyrRRXXXRRrybbbyr#",
-  "#ryyyyyrRRXXXRRryyyyyr#",
-  "#rrrrrrrRRXXXRRrrrrrrr#",
-  "#######################",
+export const aldaraTiles = [
+  "..........................................",
+  "...........#####........#.......###.......",
+  ".......###########..######.#...#####......",
+  "......###############################.....",
+  "......###############################.....",
+  "......###########xxxxxx#################..",
+  "......############xxxx###################.",
+  "...wwwwdRRRRRRRRRRRxxRRRRRRRRRRRRXXXX#####",
+  "...wwwwdRRRRRRRRRRRxxRRRRRRRRRRRRXXXX#.###",
+  "...wwwwdRRRrrrrrrrRxxRrrrrrrrRRRRXXXw.....",
+  "...wwwXRRRRryyyyyrRxxRryyyyyrRRRRXXXX###..",
+  "...wwXXRRRRrybbbyrRxxRrybbbyrRRRRXwXX###..",
+  "...wwwwddRRrybCbyrRxxRrybCbyrRRRRwwww.....",
+  "...wwwwddRRrybbbyrRxxRrybbbyrRRRRwwww.....",
+  "...wwwwddRRryyyyyrRxxRryyyyyrRRRRwwww.....",
+  "...wwwwdRRRrrrrrrrRxxRrrrrrrrRRRRwwww.....",
+  "...wwwwdRRRRRRRRRRxssxxxxxxxxRRRRXXww.....",
+  "...wwwwdRRRRRRRRRxxxsxxxxxxxsxRRRXXww.....",
+  "...wwwwRdRRRRRRRxxxRrrrrrrrRsssRRwwww.....",
+  "...wwwwRRRRRRRRxxxRRryyyyyrRdsxxRXXXw.....",
+  "...wwwXXXXXXXXXXxRRRrybbbyrRRdsXXXXXw.....",
+  "...wwwwXXXXXXXXXxRRRrybCbyrRRRRXXXXwwww...",
+  "...wXXwXXwXRRRRxxxRRrybbbyrRRRRXXXXwwXw...",
+  "...wXXXXwXwRRRRRxxxRryyyyyrRRRRXXXXXwww...",
+  ".......wXXXRRRRRRxxxrrrrrrrRRRxXXXXXwww...",
+  ".......wwXXRRRRRRRxxxxxxRRRRRxxxRRRXXXw...",
+  ".......wwwwddddfrrrrrrxxxxxxxxxRRRRXXXw...",
+  ".......wwwwddddfYyyyyrxxxxxxxxRRRRRXXXw...",
+  "............dddfYbbbyrxxRRRRRRRRRRRXXXw...",
+  "............dddfybCbYrxxrrrrrrrRRRRXXXw...",
+  "............dddfYBBBYrxxryyyyyrRRRRXXXw...",
+  "....#.#.....dddfYYYYYfxxrybbbyrRRRRXXXw...",
+  "....##......dddfffffffssfybCbyrRRRRXXXw...",
+  "....###.....ddddddddddssfYbbbyrRRRRXXXw...",
+  ".....#......dddddddddsssfYyyyyrRRRRXXww...",
+  ".........###ddddddddsssdffrrrrrRRRRXXww...",
+  "............dddddddsssdddRRRRRRRRRRXXww##.",
+  ".....#.#....wwwwwwwwxwwXXXXXXXXXXXXXwXw#..",
+  ".....###....wwwwwwXXXXXXXXXXXXXXwXXXXww...",
+  "......##....wwwwwXXXXXXXXXXXwwXwXXXXwww...",
+  "............wwwwwwwwwwXXwwXXXXXXXXwwwww...",
+  "................wwwXXwXXXXXXXXwwXwwwwww...",
+  "................wwwwwwwXXXXXXXwwwwwwwww...",
+  "................wwwwwwwwwwwwwwwwwwwwwww...",
 ];
 
-export type Road = { name: string; from: [number, number]; to: [number, number] };
+export interface Road {
+  name: string;
+  /** Tiles the road runs through, in order (WORLD_ALDARA §5.1). The exact line is drawn in game. */
+  via: string[];
+}
 
 /**
- * WORLD_LAYOUT §5: the default road network as straight runs between tile positions
- * (0-based, A1 = (0, 0)). Every tile a road crosses keeps that tile's rules: warded in
- * blue and yellow, open PvP and full loot in red and black.
+ * WORLD_ALDARA §5.1: the eight roads. Four spokes run from Quarrystone to the outer cities, four ring roads
+ * join the outer cities. Every tile a road crosses keeps that tile's rules: warded in blue and yellow, open
+ * PvP and full loot in red and black.
  */
 export const roads: Road[] = [
-  // Charter Roads: Quarrystone to each outer city, each through a red Narrows.
-  { name: "Charter Road to Forgecross", from: [11, 11], to: [4, 4] },
-  { name: "Charter Road to Timberwatch", from: [11, 11], to: [18, 4] },
-  { name: "Charter Road to Weavemere", from: [11, 11], to: [4, 18] },
-  { name: "Charter Road to Hidegate", from: [11, 11], to: [18, 18] },
-  // The Old Ring: outer city to outer city, each across a black wedge.
-  { name: "Old Ring north", from: [4, 4], to: [18, 4] },
-  { name: "Old Ring east", from: [18, 4], to: [18, 18] },
-  { name: "Old Ring south", from: [4, 18], to: [18, 18] },
-  { name: "Old Ring west", from: [4, 4], to: [4, 18] },
-  // Crown Roads: Quarrystone out to the Rim along both axes.
-  { name: "Crown Road north", from: [11, 11], to: [11, 0] },
-  { name: "Crown Road south", from: [11, 11], to: [11, 22] },
-  { name: "Crown Road west", from: [11, 11], to: [0, 11] },
-  { name: "Crown Road east", from: [11, 11], to: [22, 11] },
+  { name: "The Lakeway", via: ["X22", "V20", "S18", "Q16", "O13"] },
+  { name: "The Pinewalk", via: ["X22", "Y20", "Z17", "Z13"] },
+  { name: "The Mound Road", via: ["X22", "W24", "U26", "T28", "S30"] },
+  { name: "The Painted Road", via: ["X22", "Z24", "AB26", "AC28", "AD30", "AB33"] },
+  { name: "The Frostline", via: ["O13", "R12", "U11", "X12", "Z13"] },
+  { name: "The Old Forest Road", via: ["O13", "N16", "O19", "P21", "Q25", "R27", "S30"] },
+  { name: "The Red Road", via: ["S30", "U30", "W30", "Y31", "AA32", "AB33"] },
+  { name: "The Long East Road", via: ["Z13", "AB16", "AA19", "AC23", "AE26", "AF29", "AE31", "AB33"] },
 ];
+
+/** A few of Aldara's regions to name on the schematic (WORLD_ALDARA §4.4–4.5). Positions are tile coordinates. */
+export const regions: { name: string; x: number; y: number }[] = [
+  { name: "The Ice Cap", x: 30, y: 3.4 },
+  { name: "The Glassmere", x: 32.2, y: 17.6 },
+  { name: "Western Wilds", x: 8.6, y: 21.8 },
+  { name: "The Bayou", x: 12.3, y: 26.7 },
+  { name: "Deserts & canyon", x: 36.2, y: 32.5 },
+  { name: "Jungle Isles", x: 25, y: 41 },
+  { name: "Shattered Isles", x: 6.5, y: 41.6 },
+];
+
+/** The credited source of the world map (WORLD_ALDARA §1.1 and §9). */
+export const mapCredit = {
+  title: "Paralon Continent #1 – Aldara",
+  author: "Terralon",
+  url: "https://www.planetminecraft.com/project/paralon-continent-1-aldara/",
+} as const;
 
 /** WORLD_LAYOUT §6–8: the three safer ways to move between cities. All three are designed, not yet built. */
 export const travel = [
@@ -187,7 +225,7 @@ export const travel = [
   {
     name: "Charter Freight",
     kind: "Insured NPC shipping",
-    body: "The Court's wagon trains carry goods along the Charter Roads for a premium. Slow, taxed and capped, so players still haul most trade.",
+    body: "The Court's wagon trains carry goods along the spoke roads, always through Quarrystone, for a premium. Slow, taxed and capped, so players still haul most trade.",
     points: [
       "Hours on the road, with fees on both ends",
       "Insured against everything except the calamity",
@@ -229,7 +267,7 @@ export const systems: System[] = [
   {
     title: "Zones & full loot",
     tag: "risk = reward",
-    body: "One open world on a 23×23 grid of 512-block tiles. Each city sits in a small safe pocket of blue and yellow; bands of red and black lie between the pockets, and a black Rim runs along the edge. Tile names, tiers and danger show on entry.",
+    body: "One open world: the Aldara continent, about 20,000 × 22,000 blocks, cut into a 42 × 44 grid of 512-block tiles. Each city sits in a small safe pocket of blue and yellow; bands of red and black lie between the pockets, and the ice cap, the far coasts and the isles are a black frontier. Tile names, tiers and danger show on entry.",
     points: [
       "Flagging in yellow, knockdown and execute in red, free-for-all in black",
       "Loot bags drop everything you wore; some of it is destroyed",
@@ -319,6 +357,8 @@ export const blightLevels = ["Clean", "Tainted", "Blighted", "Festering", "Withe
 export interface Race {
   name: string;
   home: string;
+  /** Where that ground lies on Aldara (WORLD_ALDARA §6). */
+  land: string;
   primary: Element;
   secondary: Element;
   nudge: string;
@@ -328,16 +368,16 @@ export interface Race {
 
 /** REWORK §1.2 and §2.2 (approved 2026-10-01). */
 export const races: Race[] = [
-  { name: "Galeward", home: "Plains", primary: "Air", secondary: "Fire", nudge: "Rider, trader, hit-and-run skirmisher", q: "Gust Lance", e: "Grassfire Run" },
-  { name: "Rootkin", home: "Forest", primary: "Earth", secondary: "Water", nudge: "Gatherer, sustain fighter, off-healer", q: "Bramble Snare", e: "Sapwell" },
-  { name: "Dunestrider", home: "Desert", primary: "Fire", secondary: "Air", nudge: "Mobile skirmisher, opener", q: "Scorch Dart", e: "Dust Step" },
-  { name: "Frostvein", home: "Snow", primary: "Water", secondary: "Air", nudge: "Control caster, energy-rich mage", q: "Rime Spike", e: "Whiteout" },
-  { name: "Cragborn", home: "Mountains", primary: "Earth", secondary: "Fire", nudge: "Tank, front line, miner", q: "Stonefist", e: "Forge Heart" },
-  { name: "Mirefolk", home: "Swamp", primary: "Water", secondary: "Earth", nudge: "Damage over time, alchemist, area denial", q: "Bog Spit", e: "Sinkhole" },
-  { name: "Vinereach", home: "Jungle", primary: "Air", secondary: "Water", nudge: "Ambusher, assassin, hunter", q: "Canopy Leap", e: "Mist Veil" },
-  { name: "Tidesworn", home: "Ocean", primary: "Water", secondary: "Air", nudge: "Healer, support, sea trader", q: "Tide Lash", e: "Squall Call" },
-  { name: "Ochrehide", home: "Badlands", primary: "Earth", secondary: "Fire", nudge: "Crafter, durable bruiser", q: "Mesa Slam", e: "Kiln Skin" },
-  { name: "Cinderborn", home: "Volcanic / Nether", primary: "Fire", secondary: "Earth", nudge: "Aggressive caster, burst damage", q: "Cinder Burst", e: "Obsidian Shell" },
+  { name: "Galeward", land: "Hidegate’s savanna, the Wheat Fields", home: "Plains", primary: "Air", secondary: "Fire", nudge: "Rider, trader, hit-and-run skirmisher", q: "Gust Lance", e: "Grassfire Run" },
+  { name: "Rootkin", land: "The Western Wilds, the pines, the Elder Wood", home: "Forest", primary: "Earth", secondary: "Water", nudge: "Gatherer, sustain fighter, off-healer", q: "Bramble Snare", e: "Sapwell" },
+  { name: "Dunestrider", land: "The Red, Painted and Dune deserts", home: "Desert", primary: "Fire", secondary: "Air", nudge: "Mobile skirmisher, opener", q: "Scorch Dart", e: "Dust Step" },
+  { name: "Frostvein", land: "The ice cap", home: "Snow", primary: "Water", secondary: "Air", nudge: "Control caster, energy-rich mage", q: "Rime Spike", e: "Whiteout" },
+  { name: "Cragborn", land: "Forgecross’s peaks, the central ridge, the Batholith", home: "Mountains", primary: "Earth", secondary: "Fire", nudge: "Tank, front line, miner", q: "Stonefist", e: "Forge Heart" },
+  { name: "Mirefolk", land: "The Bayou around Weavemere", home: "Swamp", primary: "Water", secondary: "Earth", nudge: "Damage over time, alchemist, area denial", q: "Bog Spit", e: "Sinkhole" },
+  { name: "Vinereach", land: "The southern jungle isles", home: "Jungle", primary: "Air", secondary: "Water", nudge: "Ambusher, assassin, hunter", q: "Canopy Leap", e: "Mist Veil" },
+  { name: "Tidesworn", land: "Every coast, the Glassmere, the isles", home: "Ocean", primary: "Water", secondary: "Air", nudge: "Healer, support, sea trader", q: "Tide Lash", e: "Squall Call" },
+  { name: "Ochrehide", land: "Giant Canyon and the badlands", home: "Badlands", primary: "Earth", secondary: "Fire", nudge: "Crafter, durable bruiser", q: "Mesa Slam", e: "Kiln Skin" },
+  { name: "Cinderborn", land: "The Calderas and the Hot Springs", home: "Volcanic / Nether", primary: "Fire", secondary: "Earth", nudge: "Aggressive caster, burst damage", q: "Cinder Burst", e: "Obsidian Shell" },
 ];
 
 export interface GameClass {

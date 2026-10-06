@@ -36,7 +36,7 @@ export interface City {
   id: string;
   name: string;
   epithet: string;
-  /** City tile on the Aldara grid (WORLD_ALDARA §3). */
+  /** City tile on the 512-block Aldara grid (WORLD_ALDARA §3.1, v2). */
   tile: string;
   ground: string;
   trade: string;
@@ -49,8 +49,8 @@ export const cities: City[] = [
     id: "forgecross",
     name: "Forgecross",
     epithet: "the Anvil of the Charter",
-    tile: "O13",
-    ground: "North-west, snowy peaks and calderas",
+    tile: "K13",
+    ground: "North-west, a pine valley under the snowy peaks",
     trade: "Ore into metal bars. Plate armour, swords, maces, hammers, pickaxes.",
     proverb: "Steel does not fail. People do.",
   },
@@ -58,7 +58,7 @@ export const cities: City[] = [
     id: "timberwatch",
     name: "Timberwatch",
     epithet: "the Green Wall",
-    tile: "Z13",
+    tile: "V11",
     ground: "North, the great pine wood",
     trade: "Wood into planks. Bows, crossbows, spears, staves, furniture.",
     proverb: "Grow nothing you cannot tend.",
@@ -67,8 +67,8 @@ export const cities: City[] = [
     id: "quarrystone",
     name: "Quarrystone",
     epithet: "the Crossroads Crown",
-    tile: "X22",
-    ground: "Centre, under the central ridge",
+    tile: "T20",
+    ground: "Centre, at the foot of the central ridge",
     trade: "Stone into blocks. Tools, food, potions, facility kits, mounts. Home of the black market.",
     proverb: "Write it down, so we fail differently next time.",
   },
@@ -76,7 +76,7 @@ export const cities: City[] = [
     id: "weavemere",
     name: "Weavemere",
     epithet: "the Loom of Lakes",
-    tile: "S30",
+    tile: "O27",
     ground: "South-west, the bayou shore",
     trade: "Fibre into cloth. Cloth armour, every staff, capes, tomes.",
     proverb: "Ask quietly. The water carries.",
@@ -85,110 +85,11 @@ export const cities: City[] = [
     id: "hidegate",
     name: "Hidegate",
     epithet: "the Banner Gate",
-    tile: "AB33",
+    tile: "X31",
     ground: "South-east, savanna and red desert",
     trade: "Hide into leather. Leather armour, daggers, axes, bags, saddles.",
     proverb: "A road shared is half as long.",
   },
-];
-
-/** Tile id ("A1" … "AP44") to a 0-based [column, row]: A1 is [0, 0], AB33 is [27, 32]. */
-export function tileXY(id: string): [number, number] {
-  const m = /^([A-Z]+)(\d+)$/.exec(id);
-  if (!m) throw new Error(`bad tile id ${id}`);
-  let col = 0;
-  for (const ch of m[1]) col = col * 26 + (ch.charCodeAt(0) - 64);
-  return [col - 1, Number(m[2]) - 1];
-}
-
-/**
- * WORLD_ALDARA §4 and docs/world/aldara-tiles-draft.yml: the Aldara zone sheet, 42 columns (A … AP) by
- * 44 rows of 512-block tiles, one character per tile, row 1 first. A draft: the calibration is still
- * being checked in game.
- *
- * Land:  C city · b blue Hearth · y yellow Marches · r red fringe · R deep red ·
- *        x black seam · X black wilds · # black Rim.
- * Sea:   B blue · Y yellow (harbour water) · f red fringe · d deep red · s black seam ·
- *        w black wilds · . the Deep (Rim).
- */
-export const aldaraTiles = [
-  "..........................................",
-  "...........#####........#.......###.......",
-  ".......###########..######.#...#####......",
-  "......###############################.....",
-  "......###############################.....",
-  "......###########xxxxxx#################..",
-  "......############xxxx###################.",
-  "...wwwwdRRRRRRRRRRRxxRRRRRRRRRRRRXXXX#####",
-  "...wwwwdRRRRRRRRRRRxxRRRRRRRRRRRRXXXX#.###",
-  "...wwwwdRRRrrrrrrrRxxRrrrrrrrRRRRXXXw.....",
-  "...wwwXRRRRryyyyyrRxxRryyyyyrRRRRXXXX###..",
-  "...wwXXRRRRrybbbyrRxxRrybbbyrRRRRXwXX###..",
-  "...wwwwddRRrybCbyrRxxRrybCbyrRRRRwwww.....",
-  "...wwwwddRRrybbbyrRxxRrybbbyrRRRRwwww.....",
-  "...wwwwddRRryyyyyrRxxRryyyyyrRRRRwwww.....",
-  "...wwwwdRRRrrrrrrrRxxRrrrrrrrRRRRwwww.....",
-  "...wwwwdRRRRRRRRRRxssxxxxxxxxRRRRXXww.....",
-  "...wwwwdRRRRRRRRRxxxsxxxxxxxsxRRRXXww.....",
-  "...wwwwRdRRRRRRRxxxRrrrrrrrRsssRRwwww.....",
-  "...wwwwRRRRRRRRxxxRRryyyyyrRdsxxRXXXw.....",
-  "...wwwXXXXXXXXXXxRRRrybbbyrRRdsXXXXXw.....",
-  "...wwwwXXXXXXXXXxRRRrybCbyrRRRRXXXXwwww...",
-  "...wXXwXXwXRRRRxxxRRrybbbyrRRRRXXXXwwXw...",
-  "...wXXXXwXwRRRRRxxxRryyyyyrRRRRXXXXXwww...",
-  ".......wXXXRRRRRRxxxrrrrrrrRRRxXXXXXwww...",
-  ".......wwXXRRRRRRRxxxxxxRRRRRxxxRRRXXXw...",
-  ".......wwwwddddfrrrrrrxxxxxxxxxRRRRXXXw...",
-  ".......wwwwddddfYyyyyrxxxxxxxxRRRRRXXXw...",
-  "............dddfYbbbyrxxRRRRRRRRRRRXXXw...",
-  "............dddfybCbYrxxrrrrrrrRRRRXXXw...",
-  "............dddfYBBBYrxxryyyyyrRRRRXXXw...",
-  "....#.#.....dddfYYYYYfxxrybbbyrRRRRXXXw...",
-  "....##......dddfffffffssfybCbyrRRRRXXXw...",
-  "....###.....ddddddddddssfYbbbyrRRRRXXXw...",
-  ".....#......dddddddddsssfYyyyyrRRRRXXww...",
-  ".........###ddddddddsssdffrrrrrRRRRXXww...",
-  "............dddddddsssdddRRRRRRRRRRXXww##.",
-  ".....#.#....wwwwwwwwxwwXXXXXXXXXXXXXwXw#..",
-  ".....###....wwwwwwXXXXXXXXXXXXXXwXXXXww...",
-  "......##....wwwwwXXXXXXXXXXXwwXwXXXXwww...",
-  "............wwwwwwwwwwXXwwXXXXXXXXwwwww...",
-  "................wwwXXwXXXXXXXXwwXwwwwww...",
-  "................wwwwwwwXXXXXXXwwwwwwwww...",
-  "................wwwwwwwwwwwwwwwwwwwwwww...",
-];
-
-export interface Road {
-  name: string;
-  /** Tiles the road runs through, in order (WORLD_ALDARA §5.1). The exact line is drawn in game. */
-  via: string[];
-}
-
-/**
- * WORLD_ALDARA §5.1: the eight roads. Four spokes run from Quarrystone to the outer cities, four ring roads
- * join the outer cities. Every tile a road crosses keeps that tile's rules: warded in blue and yellow, open
- * PvP and full loot in red and black.
- */
-export const roads: Road[] = [
-  { name: "The Lakeway", via: ["X22", "V20", "S18", "Q16", "O13"] },
-  { name: "The Pinewalk", via: ["X22", "Y20", "Z17", "Z13"] },
-  { name: "The Mound Road", via: ["X22", "W24", "U26", "T28", "S30"] },
-  { name: "The Painted Road", via: ["X22", "Z24", "AB26", "AC28", "AD30", "AB33"] },
-  { name: "The Frostline", via: ["O13", "R12", "U11", "X12", "Z13"] },
-  { name: "The Old Forest Road", via: ["O13", "N16", "O19", "P21", "Q25", "R27", "S30"] },
-  { name: "The Red Road", via: ["S30", "U30", "W30", "Y31", "AA32", "AB33"] },
-  { name: "The Long East Road", via: ["Z13", "AB16", "AA19", "AC23", "AE26", "AF29", "AE31", "AB33"] },
-];
-
-/** A few of Aldara's regions to name on the schematic (WORLD_ALDARA §4.4–4.5). Positions are tile coordinates. */
-export const regions: { name: string; x: number; y: number }[] = [
-  { name: "The Ice Cap", x: 30, y: 3.4 },
-  { name: "The Glassmere", x: 32.2, y: 17.6 },
-  { name: "Western Wilds", x: 8.6, y: 21.8 },
-  { name: "The Bayou", x: 12.3, y: 26.7 },
-  { name: "Deserts & canyon", x: 36.2, y: 32.5 },
-  { name: "Jungle Isles", x: 25, y: 41 },
-  { name: "Shattered Isles", x: 6.5, y: 41.6 },
 ];
 
 /** The credited source of the world map (WORLD_ALDARA §1.1 and §9). */
@@ -267,7 +168,7 @@ export const systems: System[] = [
   {
     title: "Zones & full loot",
     tag: "risk = reward",
-    body: "One open world: the Aldara continent, about 20,000 × 22,000 blocks, cut into a 42 × 44 grid of 512-block tiles. Each city sits in a small safe pocket of blue and yellow; bands of red and black lie between the pockets, and the ice cap, the far coasts and the isles are a black frontier. Tile names, tiers and danger show on entry.",
+    body: "One open world: the Aldara continent, about 20,000 × 20,000 blocks. Zones follow its coastlines, ridges, rivers and biome edges: each city sits in a safe pocket of blue and yellow, red ground rings every pocket, black seams run between neighbouring cities, and the ice cap, the far coasts and the isles are a black frontier. Land splits about a third each: safe, red and black. Tile names, tiers and danger show on entry.",
     points: [
       "Flagging in yellow, knockdown and execute in red, free-for-all in black",
       "Loot bags drop everything you wore; some of it is destroyed",

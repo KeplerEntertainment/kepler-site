@@ -11,6 +11,8 @@ const nextConfig: NextConfig = {
   assetPrefix: basePath,
   trailingSlash: true,
   images: { unoptimized: true },
+  // Plain asset URLs (the world map's zone layer) need the prefix too.
+  env: { NEXT_PUBLIC_BASE_PATH: basePath },
   poweredByHeader: false,
 };
 

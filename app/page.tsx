@@ -69,11 +69,12 @@ export default function HomePage() {
               </p>
             ))}
             <p className="slab bg-accent text-accent-ink max-w-[60ch] px-4 py-3 text-base font-semibold">
-              The known land is Aldara, a continent about 20,000 by 22,000 blocks: a snowy north under an ice cap,
+              The known land is Aldara, a continent about 20,000 by 20,000 blocks: a snowy north under an ice cap,
               a temperate heartland of forests, lakes and ridges, red deserts and canyons in the south-east, and a
-              bayou and jungle isles along the south. Each city’s Tollstone wards only a small pocket around it.
-              Between the pockets lie bands of red and black ground, and the further from a Tollstone you go, the
-              richer and deadlier it gets.
+              bayou and jungle isles along the south. Each city’s Tollstone wards only a pocket around it. Between
+              the pockets lie bands of red and black ground, and the zones follow the land itself: coastlines,
+              ridges, rivers and biome edges. Of the land, about 32% is safe, 34% red and 34% black, and the further
+              from a Tollstone you go, the richer and deadlier it gets.
             </p>
             <p className="max-w-[60ch] text-base opacity-80">
               Every one of the ten races has a homeland somewhere on it: the Frostvein on the ice cap, the Cinderborn
@@ -85,7 +86,7 @@ export default function HomePage() {
           <div className="slab p-3 sm:p-4">
             <ZoneMap />
             <p className="mt-3 font-mono text-[11px] uppercase tracking-[0.14em] opacity-70">
-              Kepler zones on the Aldara map (draft, coordinates being verified) / 42 × 44 tiles of 512 blocks
+              Kepler zones on the Aldara map (v2 draft, coordinates being verified)
             </p>
             <p className="mt-2 text-xs leading-relaxed">
               World map:{" "}
@@ -93,7 +94,7 @@ export default function HomePage() {
                 {mapCredit.title}
                 <span className="sr-only"> (opens in a new tab)</span>
               </a>{" "}
-              by {mapCredit.author}. The schematic above is drawn by Kepler from its own tile sheet; it is not the
+              by {mapCredit.author}. The zone map above is drawn by Kepler from its own zone data; it is not the
               author’s render.
             </p>
           </div>

@@ -14,12 +14,14 @@ export default function SiteHeader({ nav }: { nav: NavItem[] }) {
             <ul className="flex flex-wrap items-center gap-2 sm:gap-3">
               {nav.map((item) => (
                 <li key={item.href}>
-                  <a
+                  <Link
                     href={item.href}
-                    className="slab slab-press inline-block px-2.5 py-1 text-[11px] sm:px-3 sm:py-1.5 sm:text-sm font-semibold uppercase tracking-wide"
+                    className={`slab slab-press inline-block px-2.5 py-1 text-[11px] sm:px-3 sm:py-1.5 sm:text-sm font-semibold uppercase tracking-wide ${
+                      item.href.startsWith("/wiki") ? "bg-accent-2 text-white" : ""
+                    }`}
                   >
                     {item.label}
-                  </a>
+                  </Link>
                 </li>
               ))}
             </ul>

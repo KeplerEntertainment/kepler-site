@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { mapCredit } from "@/lib/content";
 import { site, type NavItem } from "@/lib/site";
 
@@ -53,9 +54,9 @@ export default function SiteFooter({ nav }: { nav: NavItem[] }) {
             <ul className="space-y-2">
               {nav.map((item) => (
                 <li key={item.href}>
-                  <a href={item.href} className="ul-link font-medium">
+                  <Link href={item.href} className="ul-link font-medium">
                     {item.label}
-                  </a>
+                  </Link>
                 </li>
               ))}
             </ul>

@@ -24,11 +24,15 @@ export interface NavItem {
   label: string;
 }
 
-/** The page is one long read; the nav jumps between its sections. */
+/**
+ * The home page is one long read; the nav jumps between its sections. Hrefs are site paths (rendered with next/link,
+ * which adds the /kepler-site basePath), so they work from the wiki pages too.
+ */
 export const nav: NavItem[] = [
-  { href: "#world", label: "World" },
-  { href: "#systems", label: "Systems" },
-  { href: "#races", label: "Races & classes" },
-  { href: "#architecture", label: "Architecture" },
-  { href: "#roadmap", label: "Roadmap" },
+  { href: "/#world", label: "World" },
+  { href: "/#systems", label: "Systems" },
+  { href: "/#races", label: "Races & classes" },
+  { href: "/#architecture", label: "Architecture" },
+  { href: "/#roadmap", label: "Roadmap" },
+  { href: "/wiki/", label: "Wiki" },
 ];

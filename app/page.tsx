@@ -1,8 +1,10 @@
+import Link from "next/link";
 import Architecture from "@/components/Architecture";
 import Chip from "@/components/Chip";
 import ElementChip from "@/components/ElementChip";
 import Hero from "@/components/Hero";
 import Section from "@/components/Section";
+import WikiCallout from "@/components/WikiCallout";
 import ZoneMap from "@/components/ZoneMap";
 import {
   aspects,
@@ -53,6 +55,8 @@ export default function HomePage() {
           { href: "#roadmap", label: "Where it stands" },
         ]}
       />
+
+      <WikiCallout />
 
       {/* ── 01 The world ─────────────────────────────────────────────────── */}
       <Section
@@ -367,6 +371,11 @@ export default function HomePage() {
             </li>
           ))}
         </ol>
+        <p className="mt-6">
+          <Link href="/wiki/abilities/" className="ul-link font-semibold">
+            See all 149 skills at every stage in the wiki →
+          </Link>
+        </p>
       </Section>
 
       {/* ── 04 Architecture ──────────────────────────────────────────────── */}
